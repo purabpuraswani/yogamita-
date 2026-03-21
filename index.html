@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>YogMitra | AI Yoga Trainer</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<div class="bg-shape bg-shape-a"></div>
+	<div class="bg-shape bg-shape-b"></div>
+
+	<section id="loginView" class="login-view">
+		<div class="login-card">
+			<h1>YogMitra</h1>
+			<p>AI-based yoga posture analysis and guided practice.</p>
+			<div class="auth-tabs" role="tablist" aria-label="Authentication mode">
+				<button id="signInTab" class="auth-tab active" type="button" role="tab" aria-selected="true">Sign In</button>
+				<button id="signUpTab" class="auth-tab" type="button" role="tab" aria-selected="false">Sign Up</button>
+			</div>
+			<form id="loginForm">
+				<label id="fullNameLabel" class="hidden">Full Name
+					<input id="fullNameInput" type="text" placeholder="Your name">
+				</label>
+				<label>Email
+					<input id="emailInput" type="email" placeholder="you@example.com" required>
+				</label>
+				<label>Password
+					<input id="passwordInput" type="password" placeholder="••••••••" required>
+				</label>
+				<label id="confirmPasswordLabel" class="hidden">Confirm Password
+					<input id="confirmPasswordInput" type="password" placeholder="••••••••">
+				</label>
+				<p id="authError" class="auth-error hidden" aria-live="polite"></p>
+				<button id="authSubmitBtn" type="submit">Login</button>
+			</form>
+			<button id="authSwitchBtn" class="secondary-link" type="button">New user? Create an account</button>
+		</div>
+	</section>
+
+	<div id="profileModal" class="modal hidden">
+		<div class="modal-card">
+			<h2>Complete Your Profile</h2>
+			<p>Add indirect parameters for personalized analysis.</p>
+			<form id="profileForm">
+				<label>Age
+					<input id="profileAge" type="number" min="20" max="60" value="30" required>
+				</label>
+				<label>Flexibility
+					<select id="profileFlexibility">
+						<option value="low">Low</option>
+						<option value="medium" selected>Medium</option>
+						<option value="high">High</option>
+					</select>
+				</label>
+				<label>Experience
+					<select id="profileExperience">
+						<option value="beginner" selected>Beginner</option>
+						<option value="intermediate">Intermediate</option>
+						<option value="advanced">Advanced</option>
+					</select>
+				</label>
+				<button type="submit">Open Dashboard</button>
+			</form>
+		</div>
+	</div>
+
+	<main id="dashboardView" class="dashboard hidden">
+		<header class="header">
+			<div class="header-top">
+				<h1>YogMitra Dashboard</h1>
+				<button id="logoutBtn" class="logout-btn" type="button">Logout</button>
+			</div>
+			<p id="welcomeText">Welcome</p>
+			<p id="statusText" class="status-text">Initializing...</p>
+		</header>
+
+		<div class="dashboard-grid">
+			<aside class="panel left-panel">
+				<h2>Asana Selection</h2>
+				<label>Select Asana
+					<select id="asanaSelect">
+						<option value="Konasana" selected>Konasana</option>
+					</select>
+				</label>
+				<div class="info-box">
+					<h3>Description</h3>
+					<p id="asanaDescription"></p>
+				</div>
+				<div class="info-box">
+					<h3>FAQ</h3>
+					<ul id="faqList"></ul>
+				</div>
+			</aside>
+
+			<section class="panel right-panel">
+				<div class="tutorial-wrap">
+					<div class="section-head">
+						<h2>Instructor Tutorial</h2>
+						<div id="tutorialSteps" class="step-buttons"></div>
+					</div>
+					<video id="tutorialVideo" controls playsinline></video>
+					<p id="tutorialCaption"></p>
+				</div>
+
+				<div class="practice-wrap">
+					<div class="section-head">
+						<h2>Live Practice</h2>
+					</div>
+					<div class="practice-grid">
+						<div class="video-card">
+							<h3>Webcam (Raw)</h3>
+							<video id="rawVideo" autoplay playsinline muted></video>
+						</div>
+						<div class="video-card">
+							<h3>Webcam (MoveNet Markers)</h3>
+							<div class="annotated-wrap">
+								<video id="markedVideo" autoplay playsinline muted></video>
+								<canvas id="poseCanvas"></canvas>
+							</div>
+						</div>
+					</div>
+
+					<div class="analysis-box">
+						<div class="analysis-row">
+							<span>Prediction</span>
+							<strong id="predictionResult">-</strong>
+						</div>
+						<div class="analysis-row">
+							<span>Confidence</span>
+							<strong id="predictionConfidence">-</strong>
+						</div>
+						<div class="analysis-row">
+							<span>Score (0-10)</span>
+							<strong id="poseScore">-</strong>
+						</div>
+						<div class="analysis-row feedback-row">
+							<span>Feedback</span>
+							<ul id="feedbackList"></ul>
+						</div>
+						<div class="analysis-row session-controls">
+							<button id="startSessionBtn" type="button">Start Session</button>
+							<button id="endSessionBtn" type="button" disabled>End Session</button>
+						</div>
+						<div class="analysis-row session-summary-row">
+							<span>Session Summary</span>
+							<div id="sessionSummary" class="session-summary-text">No session completed yet.</div>
+						</div>
+						<div class="analysis-row session-summary-row">
+							<span>Live Coach</span>
+							<div id="liveCoachTip" class="session-summary-text">Start session to get real-time posture cues.</div>
+						</div>
+						<div class="analysis-row report-controls">
+							<button id="generateReportBtn" type="button">Generate Report</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="report-box">
+					<h2>AI Posture Report</h2>
+					<pre id="reportOutput">No report generated yet.</pre>
+				</div>
+			</section>
+		</div>
+	</main>
+
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+	<script type="module" src="main.js"></script>
+</body>
+</html>
