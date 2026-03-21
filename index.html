@@ -88,8 +88,12 @@
 					<p id="asanaDescription"></p>
 				</div>
 				<div class="info-box">
+					<h3>Anatomical Focus</h3>
+					<div id="anatomicalFocusContainer" class="focus-container"></div>
+				</div>
+				<div class="info-box">
 					<h3>FAQ</h3>
-					<ul id="faqList"></ul>
+					<div id="faqList" class="faq-container"></div>
 				</div>
 			</aside>
 
@@ -97,10 +101,23 @@
 				<div class="tutorial-wrap">
 					<div class="section-head">
 						<h2>Instructor Tutorial</h2>
-						<div id="tutorialSteps" class="step-buttons"></div>
+						<!-- <div id="tutorialSteps" class="step-buttons"></div> -->
 					</div>
 					<video id="tutorialVideo" controls playsinline></video>
-					<p id="tutorialCaption"></p>
+					<div id="tutorialStaticSteps" style="display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; text-align: center; color: white;">
+						<div>
+							<img src="src/konasana step 1.png" alt="Step 1" style="width: 100%; border-radius: 8px;">
+							<p style="margin-top: 8px; font-weight: bold;">Step 1</p>
+						</div>
+						<div>
+							<img src="src/konasana step 2.png" alt="Step 2" style="width: 100%; border-radius: 8px;">
+							<p style="margin-top: 8px; font-weight: bold;">Step 2</p>
+						</div>
+						<div>
+							<img src="src/konasana step 3.png" alt="Step 3" style="width: 100%; border-radius: 8px;">
+							<p style="margin-top: 8px; font-weight: bold;">Step 3</p>
+						</div>
+					</div>
 				</div>
 
 				<div class="practice-wrap">

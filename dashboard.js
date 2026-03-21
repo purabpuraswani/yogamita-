@@ -7,11 +7,16 @@ const ASANA_DATA = {
 			'Q: How far should I bend? A: Bend until you feel a stretch without collapsing your chest.',
 			'Q: Where should my gaze be? A: Look forward or slightly upward while keeping the neck relaxed.',
 		],
+		anatomicalFocus: {
+			targetMuscles: 'Obliques, Core, Shoulders, Hamstrings & Inner Thighs',
+			healthBenefits: 'Improves spinal flexibility, strengthens core, enhances digestion, and reduces back stiffness.',
+			precautions: 'Avoid with lower back injury. Only bend sideways. Don\'t overstretch. Maintain steady breathing.',
+		},
 		tutorialSteps: [
 			{
 				title: 'Step 1',
 				caption: 'Stand tall with feet apart and raise one arm straight overhead.',
-				videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+				videoUrl: 'src/konasana video.mp4',
 			},
 			{
 				title: 'Step 2',
@@ -38,38 +43,84 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 	const asanaSelect = document.getElementById('asanaSelect');
 	const asanaDescription = document.getElementById('asanaDescription');
 	const faqList = document.getElementById('faqList');
+	const anatomicalFocusContainer = document.getElementById('anatomicalFocusContainer');
 	const tutorialVideo = document.getElementById('tutorialVideo');
-	const tutorialCaption = document.getElementById('tutorialCaption');
 	const tutorialSteps = document.getElementById('tutorialSteps');
 	const generateReportBtn = document.getElementById('generateReportBtn');
 	const startSessionBtn = document.getElementById('startSessionBtn');
 	const endSessionBtn = document.getElementById('endSessionBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
+	const tutorialStaticSteps = document.getElementById('tutorialStaticSteps');
+
+	tutorialVideo.addEventListener('pause', () => {
+		tutorialStaticSteps.style.display = 'grid';
+	});
+
+	tutorialVideo.addEventListener('play', () => {
+		tutorialStaticSteps.style.display = 'none';
+	});
 
 	function renderAsana(asanaName) {
 		const config = ASANA_DATA[asanaName];
 		asanaDescription.textContent = config.description;
-		faqList.innerHTML = config.faqs.map((item) => `<li>${item}</li>`).join('');
+		faqList.innerHTML = config.faqs.map((item) => {
+			const splitIdx = item.indexOf(' A: ');
+			const q = item.substring(0, splitIdx).replace('Q: ', '');
+			const a = item.substring(splitIdx + 4);
+			return `
+				<div class="faq-item">
+					<div class="faq-q">${q}</div>
+					<div class="faq-a">${a}</div>
+				</div>
+			`;
+		}).join('');
 
-		tutorialSteps.innerHTML = '';
-		config.tutorialSteps.forEach((step, index) => {
-			const button = document.createElement('button');
-			button.type = 'button';
-			button.className = `step-btn ${index === 0 ? 'active' : ''}`;
-			button.textContent = step.title;
-			button.addEventListener('click', () => {
-				tutorialVideo.src = step.videoUrl;
-				tutorialCaption.textContent = step.caption;
-				for (const sibling of tutorialSteps.querySelectorAll('.step-btn')) {
-					sibling.classList.remove('active');
-				}
-				button.classList.add('active');
-			});
-			tutorialSteps.appendChild(button);
-		});
+		if (config.anatomicalFocus) {
+			anatomicalFocusContainer.innerHTML = `
+				<div class="focus-row">
+					<strong>Target Muscles:</strong> <span>${config.anatomicalFocus.targetMuscles}</span>
+				</div>
+				<div class="focus-row">
+					<strong>Benefits:</strong> <span>${config.anatomicalFocus.healthBenefits}</span>
+				</div>
+				<div class="focus-row">
+					<strong>Precautions:</strong> <span>${config.anatomicalFocus.precautions}</span>
+				</div>
+			`;
+			anatomicalFocusContainer.parentElement.style.display = 'block';
+		} else {
+			anatomicalFocusContainer.parentElement.style.display = 'none';
+		}
+
+		// tutorialSteps.innerHTML = '';
+		// config.tutorialSteps.forEach((step, index) => {
+		// 	const button = document.createElement('button');
+		// 	button.type = 'button';
+		// 	button.className = `step-btn ${index === 0 ? 'active' : ''}`;
+		// 	button.textContent = step.title;
+		// 	button.addEventListener('click', () => {
+		// 		tutorialVideo.src = step.videoUrl;
+		// 		tutorialCaption.textContent = step.caption;
+		// 		for (const sibling of tutorialSteps.querySelectorAll('.step-btn')) {
+		// 			sibling.classList.remove('active');
+		// 		}
+		// 		button.classList.add('active');
+		// 		if (tutorialVideo.paused) {
+		// 			tutorialStaticSteps.style.display = 'grid';
+		// 		} else {
+		// 			tutorialStaticSteps.style.display = 'none';
+		// 		}
+		// 	});
+		// 	tutorialSteps.appendChild(button);
+		// });
 
 		tutorialVideo.src = config.tutorialSteps[0].videoUrl;
-		tutorialCaption.textContent = config.tutorialSteps[0].caption;
+		
+		if (tutorialVideo.paused) {
+			tutorialStaticSteps.style.display = 'grid';
+		} else {
+			tutorialStaticSteps.style.display = 'none';
+		}
 		onAsanaChanged(asanaName);
 	}
 

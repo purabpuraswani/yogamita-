@@ -266,6 +266,60 @@ button:hover {
 	color: #c4d6e6;
 }
 
+.faq-container {
+	display: grid;
+	gap: 12px;
+	margin-top: 8px;
+}
+
+.faq-item {
+	background: rgba(10, 25, 41, 0.6);
+	border: 1px solid rgba(156, 197, 220, 0.2);
+	border-left: 3px solid var(--accent);
+	border-radius: 8px;
+	padding: 12px;
+}
+
+.faq-q {
+	font-weight: 600;
+	color: #fff;
+	margin-bottom: 6px;
+	font-size: 0.95rem;
+}
+
+.faq-a {
+	color: #c4d6e6;
+	font-size: 0.85rem;
+	line-height: 1.5;
+}
+
+.focus-container {
+	display: grid;
+	gap: 10px;
+	margin-top: 8px;
+}
+
+.focus-row {
+	display: flex;
+	flex-direction: column;
+	background: rgba(10, 25, 41, 0.4);
+	padding: 10px 12px;
+	border-radius: 8px;
+	border-left: 3px solid #7ed8ff;
+}
+
+.focus-row strong {
+	color: #fff;
+	font-size: 0.9rem;
+	margin-bottom: 4px;
+}
+
+.focus-row span {
+	color: #c4d6e6;
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+
 .info-box ul {
 	margin: 0;
 	padding-left: 16px;
