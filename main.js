@@ -45,6 +45,9 @@ const appState = {
 const rawVideoEl = document.getElementById('rawVideo');
 const markedVideoEl = document.getElementById('markedVideo');
 const canvasEl = document.getElementById('poseCanvas');
+const downloadReportBtn = document.getElementById('downloadReportBtn');
+
+let latestReportText = '';
 
 const predictor = new PredictionEngine('model/model.json');
 let poseStream = null;
@@ -52,6 +55,42 @@ let busyPredicting = false;
 let lastPredictionAt = 0;
 const STABLE_CAPTURE_FRAMES = 5;
 const STABLE_CAPTURE_MIN_CONFIDENCE = 0.55;
+
+function setDownloadReportState(enabled) {
+	if (!downloadReportBtn) {
+		return;
+	}
+
+	downloadReportBtn.disabled = !enabled;
+}
+
+function buildReportFileName() {
+	const asanaSlug = (appState.asana || 'asana')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'asana';
+	const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+	return `yogmitra-report-${asanaSlug}-${stamp}.txt`;
+}
+
+function downloadReportAsText() {
+	if (!latestReportText.trim()) {
+		renderStatus('No generated report available to download yet.');
+		setDownloadReportState(false);
+		return;
+	}
+
+	const reportBlob = new Blob([latestReportText], { type: 'text/plain;charset=utf-8' });
+	const downloadUrl = URL.createObjectURL(reportBlob);
+	const link = document.createElement('a');
+	link.href = downloadUrl;
+	link.download = buildReportFileName();
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(downloadUrl);
+	renderStatus('Report downloaded successfully.');
+}
 
 const KP = {
 	LEFT_SHOULDER: 5,
@@ -488,6 +527,8 @@ function resetAnalysisUI() {
 	setSessionControlState(false);
 	renderLiveCoachTip('Start session to get real-time posture cues.');
 	renderReport('No report generated yet.');
+	latestReportText = '';
+	setDownloadReportState(false);
 }
 
 function stopRealtimePipeline() {
@@ -652,6 +693,8 @@ async function startRealtimePipeline() {
 async function handleGenerateReport() {
 	if (!appState.sessionReport) {
 		renderReport('No session report available. Click Start Session, practice, then End Session before generating report.');
+		latestReportText = '';
+		setDownloadReportState(false);
 		return;
 	}
 
@@ -695,13 +738,19 @@ async function handleGenerateReport() {
 	};
 
 	renderReport('Generating report...');
+	latestReportText = '';
+	setDownloadReportState(false);
 	try {
 		const report = await generateYogaReport({
 			data: reportData,
 		});
 		renderReport(report);
+		latestReportText = report;
+		setDownloadReportState(true);
 	} catch (error) {
 		renderReport(`Could not generate OpenRouter report: ${error.message}`);
+		latestReportText = '';
+		setDownloadReportState(false);
 	}
 }
 
@@ -739,6 +788,12 @@ initLogin({
 		}
 	},
 });
+
+if (downloadReportBtn) {
+	downloadReportBtn.addEventListener('click', downloadReportAsText);
+}
+
+setDownloadReportState(false);
 
 window.addEventListener('beforeunload', () => {
 	stopRealtimePipeline();

@@ -205,6 +205,7 @@ export default function App() {
 								</div>
 								<div className="analysis-row report-controls">
 									<button id="generateReportBtn" type="button">Generate Report</button>
+									<button id="downloadReportBtn" type="button" disabled>Download Report</button>
 								</div>
 							</div>
 						</div>
