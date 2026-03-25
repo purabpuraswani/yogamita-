@@ -223,17 +223,25 @@ export function renderPrediction({ label, confidence, score, feedback }) {
 	const scoreEl = document.getElementById('poseScore');
 	const feedbackList = document.getElementById('feedbackList');
 
-	predictionEl.textContent = label ? label.toUpperCase() : '-';
-	predictionEl.className = getPredictionClass(label);
-	confidenceEl.textContent = Number.isFinite(confidence) ? `${(confidence * 100).toFixed(1)}%` : '-';
-	scoreEl.textContent = Number.isFinite(score) ? score.toFixed(1) : '-';
+	if (predictionEl) {
+		predictionEl.textContent = label ? label.toUpperCase() : '-';
+		predictionEl.className = getPredictionClass(label);
+	}
+	if (confidenceEl) {
+		confidenceEl.textContent = Number.isFinite(confidence) ? `${(confidence * 100).toFixed(1)}%` : '-';
+	}
+	if (scoreEl) {
+		scoreEl.textContent = Number.isFinite(score) ? score.toFixed(1) : '-';
+	}
 
-	feedbackList.innerHTML = '';
-	const items = feedback?.length ? feedback : ['Waiting for stable pose...'];
-	for (const message of items) {
-		const li = document.createElement('li');
-		li.textContent = message;
-		feedbackList.appendChild(li);
+	if (feedbackList) {
+		feedbackList.innerHTML = '';
+		const items = feedback?.length ? feedback : ['Waiting for stable pose...'];
+		for (const message of items) {
+			const li = document.createElement('li');
+			li.textContent = message;
+			feedbackList.appendChild(li);
+		}
 	}
 }
 

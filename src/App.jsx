@@ -206,10 +206,6 @@ export default function App() {
 									<strong id="predictionResult">-</strong>
 								</div>
 								<div className="analysis-row">
-									<span>Confidence</span>
-									<strong id="predictionConfidence">-</strong>
-								</div>
-								<div className="analysis-row">
 									<span>Score (0-10)</span>
 									<strong id="poseScore">-</strong>
 								</div>

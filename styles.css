@@ -551,6 +551,7 @@ button:hover {
 #reportOutput {
 	margin: 8px 0 0;
 	white-space: pre-wrap;
+	text-align: justify;
 	line-height: 1.6;
 	background: rgba(3, 10, 18, 0.8);
 	padding: 12px;
