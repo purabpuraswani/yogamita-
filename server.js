@@ -16,6 +16,9 @@ if (HAS_DIST_BUILD) {
 	app.use(express.static(__dirname));
 }
 
+app.use('/models', express.static(path.join(__dirname, 'models')));
+app.use('/datasets', express.static(path.join(__dirname, 'datasets')));
+
 function buildPrompt(data) {
 	const session = data.session || {};
 	const improvements = Array.isArray(session.improvements) ? session.improvements : [];

@@ -8,6 +8,9 @@
     "preview": "vite preview",
     "start": "node server.js",
     "server": "node server.js",
+    "dataset": "node scripts/generateDataset.js",
+    "train": "node scripts/train.js",
+    "extract-ideal-timings": "node scripts/extractIdealTimings.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

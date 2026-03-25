@@ -1,198 +1,236 @@
 # YogMitra
 
-AI-assisted yoga posture analysis web app with session-based scoring, live coaching, and report generation.
+AI yoga posture evaluation system for Konasana with step-wise analysis, temporal frame processing, timing metrics, angle-error analysis, and report generation.
 
-## What This Project Does
+## Project Description
 
-YogMitra helps a user practice Konasana using webcam-based pose detection and a trained classifier.
+YogMitra performs real-time pose tracking using MoveNet, evaluates user posture quality step-by-step, and produces a full session report. The system is designed around a temporal pipeline to avoid noisy transition frames and select significant stable frames for reliable analytics.
 
-- Detects pose landmarks using MoveNet in the browser.
-- Classifies posture quality as `correct`, `moderate`, or `incorrect`.
-- Tracks a full practice session (not just one frame).
-- Shows live coaching cues during the session.
-- Computes session score/result at session end.
-- Generates a detailed practice report through backend report API.
-- Falls back to a local detailed report when OpenRouter quota is unavailable.
+## Features
 
-## What We Have Built So Far
+- Real-time webcam pose estimation using MoveNet.
+- Step-wise pose flow detection: step1 -> step2 -> step3.
+- Frame-level classification: correct, moderate, incorrect.
+- Exponential Moving Average keypoint smoothing.
+- Movement-aware stable frame extraction.
+- State-machine enforced step order in post-session analysis.
+- Majority smoothing of step labels.
+- Step segment denoising and longest-segment selection.
+- Timing analysis relative to first detected step1 frame.
+- Degree-based angle error analysis with fixed angle order.
+- Session scoring from accuracy, angle, timing, and stability components.
+- Skeleton visualization snapshots for significant frames.
+- Backend report API with OpenRouter and local fallback report generation.
 
-### 1) Dataset and Training Pipeline
+## System Architecture
 
-- Built a dataset generator from image folders:
-  - `images/correct/`
-  - `images/moderate/`
-  - `images/incorrect/`
-- Extracted 17 keypoints and flattened into features.
-- Added indirect parameters:
-  - age
-  - flexibility (one-hot)
-  - experience (one-hot)
-- Trained a TensorFlow.js model and saved to:
-  - `model/model.json`
-  - `model/weights.bin`
+- Frontend: Vite + React UI with realtime analysis loop.
+- Pose Engine: MoveNet keypoint extraction in browser.
+- Prediction Engine: TensorFlow.js step-wise models.
+- Session Analyzer: frame trimming, segmentation, stability detection, timing/angle scoring.
+- Backend API: Express endpoint for final narrative report.
+- Data/Models: generated datasets and trained step-specific model artifacts.
 
-### 2) Frontend App
+## Frame Processing Pipeline
 
-- Login and Sign Up flow.
-- User profile (indirect parameters).
-- Profile persistence for returning users.
-- Dashboard with:
-  - tutorial panel
-  - raw webcam view
-  - marker overlay view
-  - live prediction
-  - live feedback
-  - session controls
+Video Frames
+-> MoveNet Keypoints
+-> Keypoint Smoothing (EMA)
+-> Angle Calculation
+-> Movement Calculation
+-> Step Classification
+-> Frame Storage
+-> Frame Trimming
+-> Step Segmentation
+-> Stable Segment Detection
+-> Significant Frame Selection
+-> Angle Analysis
+-> Timing Analysis
+-> Session Scoring
+-> Report Generation
+-> Skeleton Visualization
 
-### 3) Session-Based Evaluation
+## Dataset Generation Pipeline
 
-- `Start Session` starts webcam + realtime analysis.
-- `End Session` stops webcam and computes session summary.
-- Session tracks:
-  - stable posture checks
-  - needs-adjustment checks
-  - visibility quality checks
-  - average score
-  - final session result
+1. Read step-wise labeled images from dataset folders.
+2. Detect keypoints per image with MoveNet.
+3. Build keypoint features, joint-angle features, movement, and body-ratio features.
+4. Generate one-hot class labels.
+5. Save step datasets to `datasets/konasana`.
 
-### 4) Live Coaching Improvements
+Run:
 
-- Real-time coaching tips while session is active.
-- Session monitor tips based on running trend.
-- Better stability handling to avoid instant wrong label on brief tracking loss.
-- Left-right direction robustness via mirrored + left-right swapped inference.
-- Age-aware leniency for users above 50.
+```bash
+npm run dataset
+```
 
-### 5) Backend Report API
+## Model Training Pipeline
 
-- Added Express backend endpoint: `POST /api/report`
-- Uses OpenRouter when available.
-- If OpenRouter quota/rate is exceeded, returns a detailed local fallback report instead of failing.
+1. Load each step dataset from `datasets/konasana`.
+2. Validate feature consistency and angle-order metadata.
+3. Train separate TensorFlow.js models for step1, step2, and step3.
+4. Save artifacts to `models/step1_model`, `models/step2_model`, `models/step3_model`.
 
-## Project Structure
+Run:
 
-- `index.html` - App UI shell
-- `styles.css` - Styling
-- `main.js` - App orchestration, session logic, realtime pipeline usage
-- `poseDetection.js` - MoveNet webcam pose stream
-- `prediction.js` - Classifier loading and inference
-- `feedback.js` - Rule-based feedback and score helpers
-- `dashboard.js` - DOM rendering utilities
-- `login.js` - Auth/profile/session persistence
-- `report.js` - Frontend report API caller
-- `server.js` - Express server + OpenRouter/fallback report endpoint
-- `script.js` - Dataset generation script
-- `train.js` - Model training script
-- `pose_dataset.json` - Generated dataset
+```bash
+npm run train
+```
 
-## Setup and Run
+## Runtime Evaluation Pipeline
 
-## Prerequisites
+1. Capture webcam frames.
+2. Extract keypoints and smooth with EMA.
+3. Compute movement and step-aware feature vectors.
+4. Predict step and posture label.
+5. Record frame-level data with timestamp, movement, confidence, and angles.
+6. On session end, process timeline to extract robust significant frames.
 
-- Node.js installed
-- Webcam access in browser
+## Timing Analysis
 
-## Install dependencies
+- Reference time is anchored to the first step1 frame.
+- User timings:
+  - userStep1Time = step1Timestamp - sessionStartReference
+  - userStep2Time = step2Timestamp - sessionStartReference
+  - userStep3Time = step3Timestamp - sessionStartReference
+- Delay values are compared against ideal step timings.
+
+## Angle Analysis
+
+Angle order is fixed end-to-end:
+
+0 left_elbow
+1 right_elbow
+2 left_shoulder
+3 right_shoulder
+4 left_knee
+5 right_knee
+6 hip
+7 spine
+
+Per-joint angle error:
+
+`angleError = abs(userAngle[i] - idealAngle[i])`
+
+Angles are compared in degrees for consistency.
+
+## Report Generation
+
+- Session metrics are aggregated after significant frame extraction.
+- A structured report payload is sent to backend (`POST /api/report`).
+- OpenRouter generates the final narrative when available.
+- Local fallback report is returned when API quota or service errors occur.
+
+## Skeleton Visualization
+
+- Significant frames for step1, step2, and step3 are used to generate skeleton overlays.
+- Visuals correspond to stable mid-segment frames to avoid transition artifacts.
+
+## Folder Structure
+
+```text
+yogamita-
+  src/
+  public/
+    ideal_pose_data.json
+  scripts/
+    generateDataset.js
+    train.js
+    extractIdealTimings.js
+  models/
+    step1_model/
+    step2_model/
+    step3_model/
+  datasets/
+    konasana/
+  main.js
+  prediction.js
+  report.js
+  dashboard.js
+  server.js
+  package.json
+  package-lock.json
+  README.md
+  .gitignore
+```
+
+## Installation Steps
+
+1. Install Node.js (LTS recommended).
+2. Clone repository.
+3. Install dependencies:
 
 ```bash
 npm install
 ```
 
-## Run (React + API together)
+4. Optional: configure environment variable for OpenRouter.
 
-Build frontend and start backend (serves `dist`):
+## How to Run Project
 
-```powershell
-npm run build
-$env:PORT=8000
-$env:OPENROUTER_API_KEY="YOUR_OPENROUTER_KEY"
-npm start
-```
+Development mode:
 
-Open:
-
-- `http://localhost:8000`
-
-## Run in development
-
-Use two terminals:
-
-Terminal 1 (API server):
+Terminal 1 (backend)
 
 ```powershell
 $env:PORT=8000
-$env:OPENROUTER_API_KEY="YOUR_OPENROUTER_KEY"
 npm run server
 ```
 
-Terminal 2 (React app with API proxy):
+Terminal 2 (frontend)
 
 ```powershell
 npm run dev
 ```
 
-Open:
+Open: `http://127.0.0.1:5173`
 
-- `http://localhost:5173`
-
-## Set Permanent OpenRouter API Key (Windows)
-
-If you do not want to set `$env:OPENROUTER_API_KEY` every time, set it once permanently:
-
-```powershell
-setx OPENROUTER_API_KEY "YOUR_OPENROUTER_KEY"
-```
-
-Then:
-
-1. Close all open terminals.
-2. Open a new terminal.
-3. Run server normally:
-
-```powershell
-$env:PORT=8000
-npm run server
-```
-
-Note: `setx` affects new terminals only (not the currently open one).
-
-## How to Use
-
-1. Sign in or sign up.
-2. Complete profile once (age/flexibility/experience).
-3. Click `Start Session` (webcam starts).
-4. Practice Konasana and follow live coaching cues.
-5. Click `End Session` (webcam stops, session summary appears).
-6. Click `Generate Report` for detailed report.
-
-## Session Scoring Logic (High Level)
-
-- Per-check label scores are accumulated across session.
-- Final result is decided by session average score.
-- Uses stability and visibility safeguards to reduce noisy predictions.
-- For age above 50, scoring and thresholds are slightly lenient.
-
-## Report Behavior
-
-- Primary: OpenRouter-generated detailed report.
-- Fallback: detailed local report if OpenRouter is unavailable or quota-limited.
-
-## Known Notes
-
-- Current asana flow is focused on Konasana.
-- OpenRouter output depends on API quota/billing availability.
-- Best real-time results require full body visibility and stable lighting.
-
-## Quick Dev Commands
-
-Syntax checks:
+Production-like mode:
 
 ```bash
-node --check main.js
-node --check server.js
-node --check login.js
+npm run build
+npm start
 ```
 
-## Repository
+Open: `http://127.0.0.1:8000`
 
-- GitHub: https://github.com/purabpuraswani/yogamita-
+## How to Train Models
+
+1. Generate datasets (if needed):
+
+```bash
+npm run dataset
+```
+
+2. Train step-wise models:
+
+```bash
+npm run train
+```
+
+3. Extract ideal timings from instructor video (optional):
+
+```bash
+npm run extract-ideal-timings
+```
+
+## Technologies Used
+
+- JavaScript (ES modules + Node.js)
+- React + Vite
+- TensorFlow.js
+- MoveNet pose detection
+- Express.js
+- Sharp
+
+## Future Work
+
+- Multi-asana support with dynamic configuration.
+- Better temporal models for step detection (sequence models).
+- User-wise calibration and adaptive thresholds.
+- Automated dataset quality checks and augmentation controls.
+- Richer analytics dashboard and downloadable visualization bundles.
+
+## Author
+
+Purab Puraswani

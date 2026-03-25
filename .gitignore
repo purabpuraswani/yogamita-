@@ -1,3 +1,11 @@
 node_modules/
-.env
+dist/
+datasets_old/
+models_backup/
+videos/
+images/dataset_steps/
 *.log
+*.zip
+*.mp4
+.cache/
+.env

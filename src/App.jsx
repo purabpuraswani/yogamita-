@@ -235,6 +235,7 @@ export default function App() {
 						<div className="report-box">
 							<h2>AI Posture Report</h2>
 							<pre id="reportOutput">No report generated yet.</pre>
+							<div id="reportVisuals" className="report-visuals"></div>
 						</div>
 					</section>
 				</div>

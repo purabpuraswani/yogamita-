@@ -249,8 +249,43 @@ export function renderStatus(message) {
 	document.getElementById('statusText').textContent = message;
 }
 
-export function renderReport(text) {
-	document.getElementById('reportOutput').textContent = text;
+export function renderReport(text, finalReport = null) {
+	const outputEl = document.getElementById('reportOutput');
+	if (outputEl) {
+		outputEl.textContent = text;
+	}
+
+	const visualsEl = document.getElementById('reportVisuals');
+	if (!visualsEl) {
+		return;
+	}
+
+	visualsEl.innerHTML = '';
+	const images = finalReport?.skeletonImages || null;
+	if (!images) {
+		return;
+	}
+
+	for (const stepKey of ['step1', 'step2', 'step3']) {
+		const imageInfo = images[stepKey];
+		if (!imageInfo?.dataUrl) {
+			continue;
+		}
+
+		const card = document.createElement('div');
+		card.className = 'report-visual-card';
+
+		const title = document.createElement('h4');
+		title.textContent = `${stepKey.toUpperCase()} Skeleton`;
+
+		const image = document.createElement('img');
+		image.src = imageInfo.dataUrl;
+		image.alt = imageInfo.fileName || `${stepKey} skeleton image`;
+
+		card.appendChild(title);
+		card.appendChild(image);
+		visualsEl.appendChild(card);
+	}
 }
 
 export function renderLiveCoachTip(text) {
