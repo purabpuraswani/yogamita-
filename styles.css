@@ -356,6 +356,77 @@ button:hover {
 .right-panel {
 	display: grid;
 	gap: 14px;
+	align-content: start;
+}
+
+.live-practice-link-box {
+	display: grid;
+	gap: 12px;
+	align-content: start;
+}
+
+.open-live-practice-btn {
+	justify-self: start;
+	padding: 10px 16px;
+	border-radius: 10px;
+}
+
+.live-practice-header-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.secondary-nav-btn {
+	background: rgba(126, 216, 255, 0.12);
+	border: 1px solid rgba(126, 216, 255, 0.42);
+	color: #d8f2ff;
+	font-weight: 600;
+	padding: 8px 12px;
+	border-radius: 10px;
+}
+
+.secondary-nav-btn:hover {
+	background: rgba(126, 216, 255, 0.2);
+	filter: none;
+}
+
+.live-practice-grid {
+	display: grid;
+	grid-template-columns: minmax(390px, 0.88fr) minmax(430px, 1.12fr);
+	gap: 14px;
+	align-items: start;
+}
+
+.live-left-panel,
+.live-right-panel {
+	display: grid;
+	gap: 14px;
+	align-content: start;
+}
+
+.practice-cam-column {
+	display: grid;
+	gap: 12px;
+}
+
+.webcam-report-actions {
+	display: flex;
+	gap: 10px;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+}
+
+.live-right-panel .video-card {
+	display: grid;
+	justify-items: center;
+	gap: 8px;
+}
+
+.live-right-panel .video-card h3,
+.live-right-panel .webcam-report-actions {
+	width: 90%;
+	margin: 0 auto;
 }
 
 .section-head {
@@ -463,10 +534,19 @@ button:hover {
 .video-card video,
 .annotated-wrap {
 	width: 100%;
-	aspect-ratio: 4 / 3;
+	aspect-ratio: 16 / 7;
+	max-height: 215px;
 	border-radius: 12px;
 	border: 1px solid rgba(156, 197, 220, 0.2);
 	background: #000;
+}
+
+.live-right-panel .video-card video,
+.live-right-panel .annotated-wrap {
+	width: 90%;
+	margin: 0 auto;
+	aspect-ratio: 4 / 3;
+	max-height: 300px;
 }
 
 .annotated-wrap {
@@ -491,6 +571,15 @@ button:hover {
 	border: 1px solid rgba(156, 197, 220, 0.16);
 	display: grid;
 	gap: 9px;
+}
+
+.session-insights-box {
+	padding: 12px;
+	border-radius: 14px;
+	background: rgba(4, 13, 23, 0.68);
+	border: 1px solid rgba(156, 197, 220, 0.16);
+	display: grid;
+	gap: 10px;
 }
 
 .analysis-row {
@@ -576,11 +665,25 @@ button:hover {
 	.dashboard-grid {
 		grid-template-columns: 1fr;
 	}
+
+	.live-practice-grid {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (max-width: 760px) {
 	.practice-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.live-practice-header-actions {
+		width: 100%;
+		justify-content: flex-start;
+		flex-wrap: wrap;
+	}
+
+	.webcam-report-actions {
+		width: 100%;
 	}
 
 	.analysis-row {

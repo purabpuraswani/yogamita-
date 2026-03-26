@@ -172,6 +172,47 @@ export default function App() {
 							<div className="section-head">
 								<h2>Instructor Tutorial</h2>
 								<div className="tutorial-toggle">
+									<button id="tutorialModeToggleDashboard" className="tutorial-toggle-btn" type="button" aria-label="Toggle between pose and video tutorial on dashboard">Show Video</button>
+								</div>
+							</div>
+							<div className="tutorial-media-container">
+								<div id="tutorialPoseGalleryDashboard" className="tutorial-pose-gallery"></div>
+								<video id="tutorialVideoDashboard" className="hidden" controls playsInline></video>
+							</div>
+							<p id="tutorialCaptionDashboard"></p>
+						</div>
+
+						<div className="info-box live-practice-link-box">
+							<h3>Live Practice</h3>
+							<p>Open the dedicated practice page for instructor tutorial, session controls, analysis, and webcam posture tracking.</p>
+							<button id="openLivePracticeBtn" type="button" className="open-live-practice-btn">Open Live Practice Page</button>
+						</div>
+					</section>
+				</div>
+			</main>
+
+			<main id="livePracticeView" className="dashboard hidden">
+				<header className="header">
+					<div className="header-top">
+						<div className="header-brand">
+							<img src="/logo.png" alt="YogMitra logo" className="dashboard-logo" />
+							<h1>Live Practice</h1>
+						</div>
+						<div className="live-practice-header-actions">
+							<button id="backToDashboardBtn" type="button" className="secondary-nav-btn">Back to Dashboard</button>
+							<button id="logoutBtnLive" className="logout-btn" type="button">Logout</button>
+						</div>
+					</div>
+					<p id="welcomeTextLive">Welcome</p>
+					<p id="liveStatusText" className="status-text">Initializing...</p>
+				</header>
+
+				<div className="live-practice-grid">
+					<section className="panel live-left-panel">
+						<div className="tutorial-wrap">
+							<div className="section-head">
+								<h2>Instructor Tutorial</h2>
+								<div className="tutorial-toggle">
 									<button id="tutorialModeToggle" className="tutorial-toggle-btn" type="button" aria-label="Toggle between pose and video tutorial">Show Video</button>
 								</div>
 							</div>
@@ -182,60 +223,68 @@ export default function App() {
 							<p id="tutorialCaption"></p>
 						</div>
 
-						<div className="practice-wrap">
-							<div className="section-head">
-								<h2>Live Practice</h2>
+						<div className="analysis-box">
+							<div className="analysis-row">
+								<span>Prediction</span>
+								<strong id="predictionResult">-</strong>
 							</div>
-							<div className="practice-grid">
-								<div className="video-card">
-									<h3>Webcam (Raw)</h3>
-									<video id="rawVideo" autoPlay playsInline muted></video>
-								</div>
-								<div className="video-card">
-									<h3>Webcam (MoveNet Markers)</h3>
-									<div className="annotated-wrap">
-										<video id="markedVideo" autoPlay playsInline muted></video>
-										<canvas id="poseCanvas"></canvas>
-									</div>
-								</div>
+							<div className="analysis-row">
+								<span>Confidence</span>
+								<strong id="predictionConfidence">-</strong>
 							</div>
+							<div className="analysis-row">
+								<span>Score (0-10)</span>
+								<strong id="poseScore">-</strong>
+							</div>
+							<div className="analysis-row feedback-row">
+								<span>Feedback</span>
+								<ul id="feedbackList"></ul>
+							</div>
+							<div className="analysis-row session-controls">
+								<button id="startSessionBtn" type="button">Start Session</button>
+								<button id="endSessionBtn" type="button" disabled>End Session</button>
+							</div>
+						</div>
 
-							<div className="analysis-box">
-								<div className="analysis-row">
-									<span>Prediction</span>
-									<strong id="predictionResult">-</strong>
-								</div>
-								<div className="analysis-row">
-									<span>Score (0-10)</span>
-									<strong id="poseScore">-</strong>
-								</div>
-								<div className="analysis-row feedback-row">
-									<span>Feedback</span>
-									<ul id="feedbackList"></ul>
-								</div>
-								<div className="analysis-row session-controls">
-									<button id="startSessionBtn" type="button">Start Session</button>
-									<button id="endSessionBtn" type="button" disabled>End Session</button>
-								</div>
-								<div className="analysis-row session-summary-row">
-									<span>Session Summary</span>
-									<div id="sessionSummary" className="session-summary-text">No session completed yet.</div>
-								</div>
-								<div className="analysis-row session-summary-row">
-									<span>Live Coach</span>
-									<div id="liveCoachTip" className="session-summary-text">Start session to get real-time posture cues.</div>
-								</div>
-								<div className="analysis-row report-controls">
-									<button id="generateReportBtn" type="button">Generate Report</button>
-									<button id="downloadReportBtn" type="button" disabled>Download Report</button>
-								</div>
+						<div className="session-insights-box">
+							<div className="analysis-row session-summary-row">
+								<span>Session Summary</span>
+								<div id="sessionSummary" className="session-summary-text">No session completed yet.</div>
 							</div>
+							<div className="analysis-row session-summary-row">
+								<span>Live Coach</span>
+								<div id="liveCoachTip" className="session-summary-text">Start session to get real-time posture cues.</div>
+							</div>
+						</div>
+
+						<div className="webcam-report-actions">
+							<button id="generateReportBtn" type="button">Generate Report</button>
+							<button id="downloadReportBtn" type="button" disabled>Download Report</button>
 						</div>
 
 						<div className="report-box">
 							<h2>AI Posture Report</h2>
 							<pre id="reportOutput">No report generated yet.</pre>
 							<div id="reportVisuals" className="report-visuals"></div>
+						</div>
+					</section>
+
+					<section className="panel live-right-panel">
+						<div className="section-head">
+							<h2>Live Practice (Webcams)</h2>
+						</div>
+						<div className="practice-cam-column">
+							<div className="video-card">
+								<h3>Webcam (Raw)</h3>
+								<video id="rawVideo" autoPlay playsInline muted></video>
+							</div>
+							<div className="video-card">
+								<h3>Webcam (MoveNet Markers)</h3>
+								<div className="annotated-wrap">
+									<video id="markedVideo" autoPlay playsInline muted></video>
+									<canvas id="poseCanvas"></canvas>
+								</div>
+							</div>
 						</div>
 					</section>
 				</div>

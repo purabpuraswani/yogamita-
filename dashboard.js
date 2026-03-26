@@ -79,40 +79,65 @@ function getPredictionClass(label) {
 }
 
 export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onStartSession, onEndSession }) {
+	const dashboardView = document.getElementById('dashboardView');
+	const livePracticeView = document.getElementById('livePracticeView');
+	const openLivePracticeBtn = document.getElementById('openLivePracticeBtn');
+	const backToDashboardBtn = document.getElementById('backToDashboardBtn');
 	const asanaSelect = document.getElementById('asanaSelect');
 	const asanaDescription = document.getElementById('asanaDescription');
 	const faqList = document.getElementById('faqList');
 	const anatomicalFocusContainer = document.getElementById('anatomicalFocusContainer');
 	const tutorialVideo = document.getElementById('tutorialVideo');
-	const tutorialSteps = document.getElementById('tutorialSteps');
 	const tutorialCaption = document.getElementById('tutorialCaption');
 	const tutorialPoseGallery = document.getElementById('tutorialPoseGallery');
 	const tutorialModeToggle = document.getElementById('tutorialModeToggle');
+	const tutorialVideoDashboard = document.getElementById('tutorialVideoDashboard');
+	const tutorialCaptionDashboard = document.getElementById('tutorialCaptionDashboard');
+	const tutorialPoseGalleryDashboard = document.getElementById('tutorialPoseGalleryDashboard');
+	const tutorialModeToggleDashboard = document.getElementById('tutorialModeToggleDashboard');
 	const generateReportBtn = document.getElementById('generateReportBtn');
 	const startSessionBtn = document.getElementById('startSessionBtn');
 	const endSessionBtn = document.getElementById('endSessionBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
+	const logoutBtnLive = document.getElementById('logoutBtnLive');
 
-	let currentTutorialMode = 'pose';
+	const tutorialContexts = [
+		{
+			poseGallery: tutorialPoseGallery,
+			video: tutorialVideo,
+			caption: tutorialCaption,
+			toggle: tutorialModeToggle,
+			mode: 'pose',
+		},
+		{
+			poseGallery: tutorialPoseGalleryDashboard,
+			video: tutorialVideoDashboard,
+			caption: tutorialCaptionDashboard,
+			toggle: tutorialModeToggleDashboard,
+			mode: 'pose',
+		},
+	].filter((ctx) => ctx.poseGallery || ctx.video || ctx.caption || ctx.toggle);
+
 	const ASANA_DATA = getAsanaDataMap();
 
-	function setTutorialMode(mode) {
-		currentTutorialMode = mode;
+	function setTutorialModeForContext(context, mode) {
+		if (!context) return;
+		context.mode = mode;
 		const showPose = mode !== 'video';
 
-		if (tutorialPoseGallery) tutorialPoseGallery.classList.toggle('hidden', !showPose);
-		if (tutorialVideo) tutorialVideo.classList.toggle('hidden', showPose);
-		if (tutorialModeToggle) tutorialModeToggle.textContent = showPose ? 'Show Video' : 'Show Pose';
+		if (context.poseGallery) context.poseGallery.classList.toggle('hidden', !showPose);
+		if (context.video) context.video.classList.toggle('hidden', showPose);
+		if (context.toggle) context.toggle.textContent = showPose ? 'Show Video' : 'Show Pose';
 	}
 
-	function renderPoseGallery(images) {
-		if (!tutorialPoseGallery) return;
-		tutorialPoseGallery.innerHTML = '';
+	function renderPoseGallery(container, images) {
+		if (!container) return;
+		container.innerHTML = '';
 		if (!images.length) {
 			const emptyItem = document.createElement('div');
 			emptyItem.className = 'tutorial-pose-item tutorial-pose-item-empty';
 			emptyItem.textContent = 'Pose images not available.';
-			tutorialPoseGallery.appendChild(emptyItem);
+			container.appendChild(emptyItem);
 			return;
 		}
 
@@ -143,7 +168,7 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 
 			item.appendChild(img);
 			item.appendChild(label);
-			tutorialPoseGallery.appendChild(item);
+			container.appendChild(item);
 		});
 	}
 
@@ -186,21 +211,42 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 			}
 		}
 
-		if (tutorialVideo) tutorialVideo.src = config.tutorialSteps && config.tutorialSteps.length ? config.tutorialSteps[0].videoUrl : (config.tutorialVideo ? config.tutorialVideo.videoUrl : '');
-		if (tutorialCaption && config.tutorialVideo) tutorialCaption.textContent = config.tutorialVideo.caption;
-
-		if (typeof renderPoseGallery === 'function') {
-			renderPoseGallery(config.poseImages || []);
-		}
-		if (typeof setTutorialMode === 'function') {
-			setTutorialMode('pose');
+		for (const context of tutorialContexts) {
+			if (context.video) {
+				context.video.src = config.tutorialSteps && config.tutorialSteps.length
+					? config.tutorialSteps[0].videoUrl
+					: (config.tutorialVideo ? config.tutorialVideo.videoUrl : '');
+			}
+			if (context.caption && config.tutorialVideo) {
+				context.caption.textContent = config.tutorialVideo.caption;
+			}
+			renderPoseGallery(context.poseGallery, config.poseImages || []);
+			setTutorialModeForContext(context, 'pose');
 		}
 		onAsanaChanged(asanaName);
 	}
 
-	tutorialModeToggle.addEventListener('click', () => {
-		setTutorialMode(currentTutorialMode === 'pose' ? 'video' : 'pose');
-	});
+	for (const context of tutorialContexts) {
+		if (context.toggle) {
+			context.toggle.addEventListener('click', () => {
+				setTutorialModeForContext(context, context.mode === 'pose' ? 'video' : 'pose');
+			});
+		}
+	}
+
+	if (openLivePracticeBtn && dashboardView && livePracticeView) {
+		openLivePracticeBtn.addEventListener('click', () => {
+			dashboardView.classList.add('hidden');
+			livePracticeView.classList.remove('hidden');
+		});
+	}
+
+	if (backToDashboardBtn && dashboardView && livePracticeView) {
+		backToDashboardBtn.addEventListener('click', () => {
+			livePracticeView.classList.add('hidden');
+			dashboardView.classList.remove('hidden');
+		});
+	}
 
 	asanaSelect.addEventListener('change', () => renderAsana(asanaSelect.value));
 	generateReportBtn.addEventListener('click', onGenerateReport);
@@ -212,6 +258,9 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 	}
 	if (logoutBtn && typeof onLogout === 'function') {
 		logoutBtn.addEventListener('click', onLogout);
+	}
+	if (logoutBtnLive && typeof onLogout === 'function') {
+		logoutBtnLive.addEventListener('click', onLogout);
 	}
 
 	renderAsana(asanaSelect.value);
@@ -246,7 +295,13 @@ export function renderPrediction({ label, confidence, score, feedback }) {
 }
 
 export function renderStatus(message) {
-	document.getElementById('statusText').textContent = message;
+	const statusEls = ['statusText', 'liveStatusText'];
+	for (const id of statusEls) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.textContent = message;
+		}
+	}
 }
 
 export function renderReport(text, finalReport = null) {
@@ -332,5 +387,11 @@ export function setWelcomeText(user) {
 	const text = user?.fullName
 		? `Welcome, ${user.fullName} (${user.email})`
 		: `Welcome, ${user?.email || 'User'}`;
-	document.getElementById('welcomeText').textContent = text;
+	const welcomeEls = ['welcomeText', 'welcomeTextLive'];
+	for (const id of welcomeEls) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.textContent = text;
+		}
+	}
 }

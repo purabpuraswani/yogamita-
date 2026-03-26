@@ -2489,6 +2489,10 @@ function logoutUser() {
 	lastPredictionAt = 0;
 
 	document.getElementById('dashboardView').classList.add('hidden');
+	const livePracticeView = document.getElementById('livePracticeView');
+	if (livePracticeView) {
+		livePracticeView.classList.add('hidden');
+	}
 	document.getElementById('profileModal').classList.add('hidden');
 	document.getElementById('loginView').classList.remove('hidden');
 
