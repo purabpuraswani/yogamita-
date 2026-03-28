@@ -130,6 +130,84 @@ export default function App() {
 				</div>
 			</div>
 
+			<div id="sessionFeedbackModal" className="modal hidden">
+				<div className="modal-card feedback-modal-card">
+					<h2>Session Feedback</h2>
+					<p>Help us personalize your next session.</p>
+					<form id="sessionFeedbackForm">
+						<label>Overall session rating
+							<select id="feedbackOverallRating" defaultValue="4" required>
+								<option value="5">5 - Excellent</option>
+								<option value="4">4 - Good</option>
+								<option value="3">3 - Average</option>
+								<option value="2">2 - Difficult</option>
+								<option value="1">1 - Poor</option>
+							</select>
+						</label>
+						<label>How helpful were live tips and chatbot guidance?
+							<select id="feedbackCoachHelpfulness" defaultValue="4" required>
+								<option value="5">5 - Very helpful</option>
+								<option value="4">4 - Helpful</option>
+								<option value="3">3 - Neutral</option>
+								<option value="2">2 - Slightly helpful</option>
+								<option value="1">1 - Not helpful</option>
+							</select>
+						</label>
+						<label>Difficulty today
+							<select id="feedbackDifficulty" defaultValue="moderate" required>
+								<option value="easy">Easy</option>
+								<option value="moderate">Moderate</option>
+								<option value="hard">Hard</option>
+							</select>
+						</label>
+						<label>Confidence after session
+							<select id="feedbackConfidence" defaultValue="3" required>
+								<option value="5">5 - Very confident</option>
+								<option value="4">4 - Confident</option>
+								<option value="3">3 - Somewhat confident</option>
+								<option value="2">2 - Low confidence</option>
+								<option value="1">1 - Not confident</option>
+							</select>
+						</label>
+						<label>Any discomfort or pain?
+							<select id="feedbackDiscomfort" defaultValue="none" required>
+								<option value="none">No discomfort</option>
+								<option value="mild">Mild discomfort</option>
+								<option value="pain">Pain</option>
+							</select>
+						</label>
+						<label id="feedbackPainAreaWrap" className="hidden">Where did you feel it most?
+							<select id="feedbackPainArea" defaultValue="shoulder">
+								<option value="neck">Neck</option>
+								<option value="shoulder">Shoulder</option>
+								<option value="back">Back</option>
+								<option value="hip">Hip</option>
+								<option value="knee">Knee</option>
+								<option value="other">Other</option>
+							</select>
+						</label>
+						<label>Main challenge faced
+							<select id="feedbackMainChallenge" defaultValue="holding_pose" required>
+								<option value="no_difficulty">No major difficulty</option>
+								<option value="balance">Maintaining balance</option>
+								<option value="holding_pose">Holding final pose</option>
+								<option value="timing">Following timing</option>
+								<option value="instructions">Understanding instructions</option>
+								<option value="camera_tracking">Camera tracking</option>
+								<option value="other">Other</option>
+							</select>
+						</label>
+						<label>Anything to improve for next session? (optional)
+							<input id="feedbackComment" type="text" maxLength={220} placeholder="Your suggestion" />
+						</label>
+						<div className="feedback-modal-actions">
+							<button id="feedbackSkipBtn" type="button" className="secondary-nav-btn">Skip</button>
+							<button type="submit">Submit Feedback</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
 			<main id="dashboardView" className="dashboard hidden">
 				<header className="header">
 					<div className="header-top">
@@ -257,14 +335,31 @@ export default function App() {
 							</div>
 						</div>
 
+						<div className="chatbot-box">
+							<div className="chatbot-head">
+								<h2>Asana Chatbot</h2>
+								<p>Ask doubts using current asana and session performance.</p>
+							</div>
+							<div id="chatbotMessages" className="chatbot-messages" aria-live="polite">
+								<div className="chat-msg chat-msg-bot">Hi! Ask me about your selected asana, posture issues, or session results.</div>
+							</div>
+							<form id="chatbotForm" className="chatbot-form">
+								<input id="chatbotInput" type="text" placeholder="Ask your asana question..." maxLength={500} required />
+								<button id="chatbotSendBtn" type="submit">Send</button>
+							</form>
+						</div>
+
 						<div className="webcam-report-actions">
 							<button id="generateReportBtn" type="button">Generate Report</button>
 							<button id="downloadReportBtn" type="button" disabled>Download Report</button>
 						</div>
 
 						<div className="report-box">
-							<h2>AI Posture Report</h2>
-							<pre id="reportOutput">No report generated yet.</pre>
+							<div className="report-title-row">
+								<h2>AI Posture Report</h2>
+								<span id="reportSourceBadge" className="report-source-badge">Awaiting Report</span>
+							</div>
+							<div id="reportOutput" className="report-output">No report generated yet.</div>
 							<div id="reportVisuals" className="report-visuals"></div>
 						</div>
 					</section>

@@ -29,8 +29,18 @@ export async function generateYogaReport({ data }) {
 
 	const result = await response.json();
 	if (result?.report) {
-		return result.report;
+		return {
+			text: String(result.report),
+			source: result.source || 'openrouter',
+			model: result.model || null,
+			reason: result.reason || null,
+		};
 	}
 
-	return `${fallbackReport(data)}\n\nServer returned no report content.`;
+	return {
+		text: `${fallbackReport(data)}\n\nServer returned no report content.`,
+		source: 'fallback',
+		model: null,
+		reason: 'empty_report',
+	};
 }

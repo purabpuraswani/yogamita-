@@ -304,11 +304,208 @@ export function renderStatus(message) {
 	}
 }
 
-export function renderReport(text, finalReport = null) {
+function setReportSourceBadge(meta) {
+	const badgeEl = document.getElementById('reportSourceBadge');
+	if (!badgeEl) {
+		return;
+	}
+
+	if (!meta || !meta.source) {
+		badgeEl.textContent = 'Awaiting Report';
+		badgeEl.className = 'report-source-badge';
+		return;
+	}
+
+	if (meta.source === 'openrouter') {
+		badgeEl.textContent = `OpenRouter${meta.model ? ` (${meta.model})` : ''}`;
+		badgeEl.className = 'report-source-badge report-source-openrouter';
+		return;
+	}
+
+	badgeEl.textContent = meta.reason ? `Fallback (${meta.reason})` : 'Fallback';
+	badgeEl.className = 'report-source-badge report-source-fallback';
+}
+
+function renderStructuredReportText(text, outputEl) {
+	outputEl.innerHTML = '';
+
+	const lines = String(text || '').split('\n');
+	let listEl = null;
+
+	const parseInlineMarkdown = (input) => {
+		const fragment = document.createDocumentFragment();
+		const line = String(input || '');
+		const boldRegex = /\*\*(.+?)\*\*/g;
+		let cursor = 0;
+		let match = boldRegex.exec(line);
+
+		while (match) {
+			if (match.index > cursor) {
+				fragment.appendChild(document.createTextNode(line.slice(cursor, match.index)));
+			}
+			const strong = document.createElement('strong');
+			strong.textContent = match[1];
+			fragment.appendChild(strong);
+			cursor = match.index + match[0].length;
+			match = boldRegex.exec(line);
+		}
+
+		if (cursor < line.length) {
+			fragment.appendChild(document.createTextNode(line.slice(cursor)));
+		}
+
+		return fragment;
+	};
+
+	const appendParagraph = (line) => {
+		const paragraph = document.createElement('p');
+		paragraph.className = 'report-line';
+		paragraph.appendChild(parseInlineMarkdown(line));
+		outputEl.appendChild(paragraph);
+	};
+
+	const appendHeading = (line) => {
+		const heading = document.createElement('h3');
+		heading.className = 'report-section-title';
+		heading.textContent = line;
+		outputEl.appendChild(heading);
+	};
+
+	const parseTableCells = (line) => {
+		const trimmed = String(line || '').trim();
+		const withoutEdgePipes = trimmed.replace(/^\|/, '').replace(/\|$/, '');
+		return withoutEdgePipes.split('|').map((cell) => cell.trim());
+	};
+
+	const isTableSeparatorLine = (line) => {
+		const cells = parseTableCells(line);
+		if (!cells.length) {
+			return false;
+		}
+		return cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+	};
+
+	const appendMarkdownTable = (tableLines) => {
+		if (!Array.isArray(tableLines) || tableLines.length < 2) {
+			return;
+		}
+
+		const headerCells = parseTableCells(tableLines[0]);
+		const bodyLines = tableLines.slice(2);
+
+		const wrap = document.createElement('div');
+		wrap.className = 'report-table-wrap';
+
+		const table = document.createElement('table');
+		table.className = 'report-table';
+
+		const thead = document.createElement('thead');
+		const headerRow = document.createElement('tr');
+		for (const cellText of headerCells) {
+			const th = document.createElement('th');
+			th.textContent = cellText;
+			headerRow.appendChild(th);
+		}
+		thead.appendChild(headerRow);
+		table.appendChild(thead);
+
+		const tbody = document.createElement('tbody');
+		for (const bodyLine of bodyLines) {
+			const cells = parseTableCells(bodyLine);
+			if (!cells.length || cells.every((cell) => !cell)) {
+				continue;
+			}
+			const row = document.createElement('tr');
+			for (const cellText of cells) {
+				const td = document.createElement('td');
+				td.textContent = cellText;
+				row.appendChild(td);
+			}
+			tbody.appendChild(row);
+		}
+		table.appendChild(tbody);
+
+		wrap.appendChild(table);
+		outputEl.appendChild(wrap);
+	};
+
+	for (let i = 0; i < lines.length; i += 1) {
+		const rawLine = lines[i];
+		const line = rawLine.trimEnd();
+		const cleanLine = line.trim();
+
+		if (!cleanLine) {
+			listEl = null;
+			const spacer = document.createElement('div');
+			spacer.className = 'report-spacer';
+			outputEl.appendChild(spacer);
+			continue;
+		}
+
+		if (/^##\s+/.test(cleanLine)) {
+			listEl = null;
+			appendHeading(cleanLine.replace(/^##\s+/, ''));
+			continue;
+		}
+
+		if (/^\d+\)\s+/.test(cleanLine)) {
+			listEl = null;
+			appendHeading(cleanLine);
+			continue;
+		}
+
+		if (cleanLine.startsWith('|')) {
+			const tableLines = [cleanLine];
+			let j = i + 1;
+			while (j < lines.length) {
+				const nextLine = String(lines[j] || '').trim();
+				if (!nextLine.startsWith('|')) {
+					break;
+				}
+				tableLines.push(nextLine);
+				j += 1;
+			}
+
+			if (tableLines.length >= 2 && isTableSeparatorLine(tableLines[1])) {
+				listEl = null;
+				appendMarkdownTable(tableLines);
+				i = j - 1;
+				continue;
+			}
+
+			listEl = null;
+			appendParagraph(cleanLine);
+			i = j - 1;
+			continue;
+		}
+
+		if (cleanLine.startsWith('- ')) {
+			if (!listEl) {
+				listEl = document.createElement('ul');
+				listEl.className = 'report-list';
+				outputEl.appendChild(listEl);
+			}
+			const item = document.createElement('li');
+			item.appendChild(parseInlineMarkdown(cleanLine.slice(2)));
+			listEl.appendChild(item);
+			continue;
+		}
+
+		listEl = null;
+		appendParagraph(cleanLine);
+	}
+
+	if (!outputEl.textContent?.trim()) {
+		outputEl.textContent = 'No report generated yet.';
+	}
+}
+
+export function renderReport(text, finalReport = null, meta = null) {
 	const outputEl = document.getElementById('reportOutput');
 	if (outputEl) {
-		outputEl.textContent = text;
+		renderStructuredReportText(text, outputEl);
 	}
+	setReportSourceBadge(meta);
 
 	const visualsEl = document.getElementById('reportVisuals');
 	if (!visualsEl) {

@@ -51,6 +51,16 @@ const rawVideoEl = document.getElementById('rawVideo');
 const markedVideoEl = document.getElementById('markedVideo');
 const canvasEl = document.getElementById('poseCanvas');
 const downloadReportBtn = document.getElementById('downloadReportBtn');
+const chatbotMessagesEl = document.getElementById('chatbotMessages');
+const chatbotFormEl = document.getElementById('chatbotForm');
+const chatbotInputEl = document.getElementById('chatbotInput');
+const chatbotSendBtnEl = document.getElementById('chatbotSendBtn');
+const sessionFeedbackModalEl = document.getElementById('sessionFeedbackModal');
+const sessionFeedbackFormEl = document.getElementById('sessionFeedbackForm');
+const feedbackDiscomfortEl = document.getElementById('feedbackDiscomfort');
+const feedbackPainAreaWrapEl = document.getElementById('feedbackPainAreaWrap');
+const feedbackPainAreaEl = document.getElementById('feedbackPainArea');
+const feedbackSkipBtnEl = document.getElementById('feedbackSkipBtn');
 
 let latestReportText = '';
 
@@ -84,6 +94,8 @@ const STEP_STATE = {
 	STEP3: 'STEP3',
 	FINISHED: 'FINISHED',
 };
+const SESSION_HISTORY_KEY_PREFIX = 'yogmitra_session_history';
+const SESSION_HISTORY_MAX = 100;
 const JOINT_ANGLE_ORDER = [
 	'left_elbow',
 	'right_elbow',
@@ -135,6 +147,411 @@ function downloadReportAsText() {
 	link.remove();
 	URL.revokeObjectURL(downloadUrl);
 	renderStatus('Report downloaded successfully.');
+}
+
+function appendChatMessage(role, text) {
+	if (!chatbotMessagesEl || !text) {
+		return;
+	}
+
+	const msgEl = document.createElement('div');
+	msgEl.className = role === 'user' ? 'chat-msg chat-msg-user' : 'chat-msg chat-msg-bot';
+	msgEl.textContent = text;
+	chatbotMessagesEl.appendChild(msgEl);
+	chatbotMessagesEl.scrollTop = chatbotMessagesEl.scrollHeight;
+}
+
+function getAsanaCatalogContext(asanaName) {
+	const catalog = Array.isArray(window.__yogmitraAsanas) ? window.__yogmitraAsanas : [];
+	const selected = catalog.find((item) => item?.name === asanaName) || null;
+	if (!selected) {
+		return null;
+	}
+
+	return {
+		name: selected.name,
+		description: selected.description || '',
+		faqs: Array.isArray(selected.faqs) ? selected.faqs : [],
+		anatomicalFocus: selected.anatomicalFocus || null,
+		tutorialSteps: Array.isArray(selected.tutorialSteps)
+			? selected.tutorialSteps.map((step) => ({ title: step.title, caption: step.caption }))
+			: [],
+	};
+}
+
+function toStorageSlug(value) {
+	return String(value || '')
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+function buildSessionHistoryStorageKey(userEmail, asanaName) {
+	return `${SESSION_HISTORY_KEY_PREFIX}_${toStorageSlug(userEmail)}_${toStorageSlug(asanaName)}`;
+}
+
+function readSessionHistory(userEmail, asanaName) {
+	if (!userEmail || !asanaName) {
+		return [];
+	}
+
+	const key = buildSessionHistoryStorageKey(userEmail, asanaName);
+	try {
+		const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+		return Array.isArray(parsed) ? parsed : [];
+	} catch (_error) {
+		return [];
+	}
+}
+
+function toFixedOrNullForHistory(value, digits = 2) {
+	const numeric = Number(value);
+	return Number.isFinite(numeric) ? Number(numeric.toFixed(digits)) : null;
+}
+
+function buildCompactAngleSummary(angleAnalysis) {
+	if (!angleAnalysis || typeof angleAnalysis !== 'object') {
+		return null;
+	}
+
+	const stepKeys = ['step1', 'step2', 'step3'];
+	const perStep = {};
+	const topJointIssues = [];
+
+	for (const stepKey of stepKeys) {
+		const stepInfo = angleAnalysis?.steps?.[stepKey] || null;
+		perStep[stepKey] = {
+			averageError: toFixedOrNullForHistory(stepInfo?.averageError),
+			performance: stepInfo?.performance || 'Unknown',
+		};
+
+		const worstJoint = (Array.isArray(stepInfo?.jointAnalysis) ? stepInfo.jointAnalysis : [])
+			.filter((joint) => Number.isFinite(Number(joint?.angleError)))
+			.sort((a, b) => Number(b.angleError) - Number(a.angleError))[0];
+
+		if (worstJoint) {
+			topJointIssues.push({
+				step: stepKey,
+				jointName: worstJoint.jointName || `joint_${Number(worstJoint.jointIndex) + 1}`,
+				angleError: toFixedOrNullForHistory(worstJoint.angleError),
+				classification: worstJoint.classification || 'Unknown',
+			});
+		}
+	}
+
+	return {
+		overallAverageError: toFixedOrNullForHistory(angleAnalysis?.overallAverageError),
+		overallPerformance: angleAnalysis?.overallPerformance || 'Unknown',
+		perStep,
+		topJointIssues,
+	};
+}
+
+function buildAngleComparisonSummary(currentAngleSummary, previousAngleSummary) {
+	if (!currentAngleSummary || !previousAngleSummary) {
+		return null;
+	}
+
+	const safeSubtract = (curr, prev) => {
+		const current = Number(curr);
+		const previous = Number(prev);
+		if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+			return null;
+		}
+		return Number((current - previous).toFixed(2));
+	};
+
+	const stepKeys = ['step1', 'step2', 'step3'];
+	const perStep = {};
+	for (const stepKey of stepKeys) {
+		perStep[stepKey] = {
+			errorDelta: safeSubtract(
+				currentAngleSummary?.perStep?.[stepKey]?.averageError,
+				previousAngleSummary?.perStep?.[stepKey]?.averageError,
+			),
+		};
+	}
+
+	return {
+		overallErrorDelta: safeSubtract(
+			currentAngleSummary?.overallAverageError,
+			previousAngleSummary?.overallAverageError,
+		),
+		perStep,
+	};
+}
+
+function buildSessionHistoryEntry(sessionReport) {
+	if (!sessionReport) {
+		return null;
+	}
+
+	return {
+		endedAt: new Date().toISOString(),
+		asanaName: sessionReport.asanaName,
+		sessionDuration: sessionReport.sessionDuration,
+		totalFrames: sessionReport.totalFrames,
+		totalCapturedFrames: sessionReport.totalCapturedFrames,
+		correctFrameCount: sessionReport.correctFrameCount,
+		moderateFrameCount: sessionReport.moderateFrameCount,
+		incorrectFrameCount: sessionReport.incorrectFrameCount,
+		skippedFrameCount: sessionReport.skippedFrameCount,
+		averageScore: sessionReport.averageScore,
+		finalResult: sessionReport.finalResult,
+		improvements: Array.isArray(sessionReport.improvements) ? sessionReport.improvements : [],
+		angleSummary: buildCompactAngleSummary(sessionReport.angleAnalysis),
+	};
+}
+
+function persistSessionHistoryEntry(sessionReport) {
+	const userEmail = appState.user?.email;
+	const asanaName = sessionReport?.asanaName || appState.asana;
+	if (!userEmail || !asanaName || !sessionReport) {
+		return null;
+	}
+
+	const key = buildSessionHistoryStorageKey(userEmail, asanaName);
+	const existing = readSessionHistory(userEmail, asanaName);
+	const nextEntry = buildSessionHistoryEntry(sessionReport);
+	if (!nextEntry) {
+		return null;
+	}
+
+	const updated = [...existing, nextEntry].slice(-SESSION_HISTORY_MAX);
+	localStorage.setItem(key, JSON.stringify(updated));
+	return nextEntry;
+}
+
+function updateLatestSessionFeedbackInHistory(feedbackPayload) {
+	const userEmail = appState.user?.email;
+	const asanaName = appState.sessionReport?.asanaName || appState.asana;
+	if (!userEmail || !asanaName) {
+		return false;
+	}
+
+	const key = buildSessionHistoryStorageKey(userEmail, asanaName);
+	const existing = readSessionHistory(userEmail, asanaName);
+	if (!existing.length) {
+		return false;
+	}
+
+	const updated = [...existing];
+	updated[updated.length - 1] = {
+		...updated[updated.length - 1],
+		userFeedback: feedbackPayload,
+	};
+	localStorage.setItem(key, JSON.stringify(updated));
+
+	if (appState.sessionReport) {
+		appState.sessionReport.userFeedback = feedbackPayload;
+	}
+	return true;
+}
+
+function summarizeSessionHistory(history) {
+	const safeHistory = Array.isArray(history) ? history : [];
+	const resultCounts = {
+		Correct: 0,
+		Moderate: 0,
+		Incorrect: 0,
+	};
+
+	for (const item of safeHistory) {
+		const result = String(item?.finalResult || '').trim();
+		if (Object.prototype.hasOwnProperty.call(resultCounts, result)) {
+			resultCounts[result] += 1;
+		}
+	}
+
+	const latest = safeHistory.length ? safeHistory[safeHistory.length - 1] : null;
+	const previousSession = safeHistory.length > 1 ? safeHistory[safeHistory.length - 2] : null;
+	const angleComparison = buildAngleComparisonSummary(latest?.angleSummary, previousSession?.angleSummary);
+	const recentFeedback = safeHistory
+		.filter((entry) => entry?.userFeedback)
+		.slice(-5)
+		.map((entry) => ({
+			endedAt: entry.endedAt,
+			overallRating: entry.userFeedback.overallRating,
+			difficulty: entry.userFeedback.difficulty,
+			confidenceAfterSession: entry.userFeedback.confidenceAfterSession,
+			discomfortLevel: entry.userFeedback.discomfortLevel,
+			mainChallenge: entry.userFeedback.mainChallenge,
+			comment: entry.userFeedback.comment || '',
+		}));
+
+	return {
+		totalSessions: safeHistory.length,
+		resultCounts,
+		latestSession: latest,
+		previousSession,
+		angleComparison,
+		recentFeedback,
+		recentSessions: safeHistory.slice(-5),
+	};
+}
+
+function buildChatContext() {
+	const session = appState.sessionReport || null;
+	const userEmail = appState.user?.email || null;
+	const asanaName = appState.asana;
+	const sessionHistory = summarizeSessionHistory(readSessionHistory(userEmail, asanaName));
+	const previousAngleSummary = sessionHistory?.previousSession?.angleSummary || null;
+	const safeSession = session
+		? {
+			asanaName: session.asanaName,
+			sessionDuration: session.sessionDuration,
+			totalFrames: session.totalFrames,
+			totalCapturedFrames: session.totalCapturedFrames,
+			correctFrameCount: session.correctFrameCount,
+			moderateFrameCount: session.moderateFrameCount,
+			incorrectFrameCount: session.incorrectFrameCount,
+			skippedFrameCount: session.skippedFrameCount,
+			averageScore: session.averageScore,
+			finalResult: session.finalResult,
+			improvements: Array.isArray(session.improvements) ? session.improvements : [],
+			timingAnalysis: session.timingAnalysis || null,
+			angleAnalysis: session.angleAnalysis || null,
+			angleSummary: buildCompactAngleSummary(session.angleAnalysis),
+			userFeedback: session.userFeedback || null,
+		}
+		: null;
+	const angleComparisonCurrentVsPrevious = buildAngleComparisonSummary(safeSession?.angleSummary, previousAngleSummary);
+
+	return {
+		user: appState.user
+			? {
+				email: appState.user.email,
+				fullName: appState.user.fullName || '',
+			}
+			: null,
+		userProfile: appState.userProfile || null,
+		selectedAsana: appState.asana,
+		asanaInfo: getAsanaCatalogContext(appState.asana),
+		session: safeSession,
+		sessionHistorySummary: sessionHistory,
+		angleComparisonCurrentVsPrevious,
+	};
+}
+
+function setFeedbackPainAreaVisibility(discomfortValue) {
+	if (!feedbackPainAreaWrapEl) {
+		return;
+	}
+
+	const needsPainArea = discomfortValue === 'mild' || discomfortValue === 'pain';
+	feedbackPainAreaWrapEl.classList.toggle('hidden', !needsPainArea);
+	if (feedbackPainAreaEl) {
+		feedbackPainAreaEl.required = needsPainArea;
+	}
+}
+
+function openSessionFeedbackModal() {
+	if (!sessionFeedbackModalEl) {
+		return;
+	}
+
+	sessionFeedbackModalEl.classList.remove('hidden');
+	setFeedbackPainAreaVisibility(feedbackDiscomfortEl?.value || 'none');
+}
+
+function closeSessionFeedbackModal() {
+	if (!sessionFeedbackModalEl) {
+		return;
+	}
+
+	sessionFeedbackModalEl.classList.add('hidden');
+}
+
+function collectSessionFeedbackFromForm() {
+	const getValue = (id, fallback = '') => {
+		const el = document.getElementById(id);
+		if (!el) return fallback;
+		return String(el.value || fallback).trim();
+	};
+
+	const discomfortLevel = getValue('feedbackDiscomfort', 'none');
+	const feedbackPayload = {
+		submittedAt: new Date().toISOString(),
+		overallRating: Number(getValue('feedbackOverallRating', '4')),
+		coachHelpfulness: Number(getValue('feedbackCoachHelpfulness', '4')),
+		difficulty: getValue('feedbackDifficulty', 'moderate'),
+		confidenceAfterSession: Number(getValue('feedbackConfidence', '3')),
+		discomfortLevel,
+		painArea: (discomfortLevel === 'mild' || discomfortLevel === 'pain')
+			? getValue('feedbackPainArea', 'other')
+			: null,
+		mainChallenge: getValue('feedbackMainChallenge', 'holding_pose'),
+		comment: getValue('feedbackComment', ''),
+	};
+
+	return feedbackPayload;
+}
+
+function handleSessionFeedbackSubmit(event) {
+	event.preventDefault();
+	const feedbackPayload = collectSessionFeedbackFromForm();
+	const stored = updateLatestSessionFeedbackInHistory(feedbackPayload);
+
+	closeSessionFeedbackModal();
+	if (stored) {
+		renderStatus('Thanks for your feedback. Chatbot memory updated for personalized coaching.');
+	} else {
+		renderStatus('Feedback received, but could not attach it to session history.');
+	}
+}
+
+async function handleChatbotSubmit(event) {
+	event.preventDefault();
+	if (!chatbotInputEl) {
+		return;
+	}
+
+	const question = chatbotInputEl.value.trim();
+	if (!question) {
+		return;
+	}
+
+	appendChatMessage('user', question);
+	chatbotInputEl.value = '';
+	if (chatbotInputEl) {
+		chatbotInputEl.disabled = true;
+	}
+	if (chatbotSendBtnEl) {
+		chatbotSendBtnEl.disabled = true;
+		chatbotSendBtnEl.textContent = 'Thinking...';
+	}
+
+	try {
+		const response = await fetch('/api/chat', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				question,
+				context: buildChatContext(),
+			}),
+		});
+
+		if (!response.ok) {
+			const message = await response.text();
+			throw new Error(message || `Chat API failed with status ${response.status}`);
+		}
+
+		const result = await response.json();
+		const reply = String(result?.reply || '').trim() || 'I could not generate a response. Please try again.';
+		appendChatMessage('bot', reply);
+	} catch (error) {
+		appendChatMessage('bot', `I could not answer right now: ${error.message}`);
+	} finally {
+		if (chatbotInputEl) {
+			chatbotInputEl.disabled = false;
+			chatbotInputEl.focus();
+		}
+		if (chatbotSendBtnEl) {
+			chatbotSendBtnEl.disabled = false;
+			chatbotSendBtnEl.textContent = 'Send';
+		}
+	}
 }
 
 const KP = {
@@ -2542,6 +2959,9 @@ async function endSession() {
 			return false;
 		}
 
+		persistSessionHistoryEntry(appState.sessionReport);
+		openSessionFeedbackModal();
+
 		const leniencyNote = appState.sessionReport.leniencyApplied ? ' (age-aware scoring applied)' : '';
 		renderStatus(`Session ended. Final result: ${finalResult} (${averageScore.toFixed(2)}/10)${leniencyNote}.`);
 		return true;
@@ -2947,20 +3367,28 @@ async function handleGenerateReport() {
 		formattedFinalReport: finalReportText,
 	};
 
-	renderReport('Generating report...', source.finalReport || null);
+	renderReport('Generating report...', source.finalReport || null, null);
 	latestReportText = '';
 	setDownloadReportState(false);
 	try {
-		const report = await generateYogaReport({
+		const reportResponse = await generateYogaReport({
 			data: reportData,
 		});
-		renderReport(report, source.finalReport || null);
-		latestReportText = report;
+		renderReport(reportResponse.text, source.finalReport || null, {
+			source: reportResponse.source,
+			model: reportResponse.model,
+			reason: reportResponse.reason,
+		});
+		latestReportText = reportResponse.text;
 		setDownloadReportState(true);
 		console.log('Report Generated');
 	} catch (error) {
 		const fallbackText = `${finalReportText}\n\nNote: Could not generate OpenRouter report: ${error.message}`;
-		renderReport(fallbackText, source.finalReport || null);
+		renderReport(fallbackText, source.finalReport || null, {
+			source: 'fallback',
+			reason: 'report_api_error',
+			model: null,
+		});
 		latestReportText = fallbackText;
 		setDownloadReportState(true);
 	}
@@ -3003,6 +3431,27 @@ initLogin({
 
 if (downloadReportBtn) {
 	downloadReportBtn.addEventListener('click', downloadReportAsText);
+}
+
+if (chatbotFormEl) {
+	chatbotFormEl.addEventListener('submit', handleChatbotSubmit);
+}
+
+if (feedbackDiscomfortEl) {
+	feedbackDiscomfortEl.addEventListener('change', (event) => {
+		setFeedbackPainAreaVisibility(String(event?.target?.value || 'none'));
+	});
+}
+
+if (sessionFeedbackFormEl) {
+	sessionFeedbackFormEl.addEventListener('submit', handleSessionFeedbackSubmit);
+}
+
+if (feedbackSkipBtnEl) {
+	feedbackSkipBtnEl.addEventListener('click', () => {
+		closeSessionFeedbackModal();
+		renderStatus('Feedback skipped. You can still continue practice and chat.');
+	});
 }
 
 setDownloadReportState(false);

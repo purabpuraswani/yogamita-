@@ -121,6 +121,14 @@ Angles are compared in degrees for consistency.
 - OpenRouter generates the final narrative when available.
 - Local fallback report is returned when API quota or service errors occur.
 
+## Asana Chatbot (OpenRouter)
+
+- Live Practice page includes an Asana Chatbot panel.
+- Chatbot request includes selected asana info, user profile, and latest session summary.
+- Frontend sends context to backend `POST /api/chat`.
+- Backend uses OpenRouter when `OPENROUTER_API_KEY` is configured.
+- If key is missing or API is unavailable, a local fallback answer is returned.
+
 ## Skeleton Visualization
 
 - Significant frames for step1, step2, and step3 are used to generate skeleton overlays.
@@ -165,6 +173,13 @@ npm install
 ```
 
 4. Optional: configure environment variable for OpenRouter.
+
+Create `.env` from `.env.example` and set:
+
+```bash
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=openai/gpt-4o-mini
+```
 
 ## How to Run Project
 

@@ -200,6 +200,19 @@ button:hover {
 	z-index: 5;
 }
 
+.feedback-modal-card {
+	max-height: 86vh;
+	overflow: auto;
+}
+
+.feedback-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 4px;
+	flex-wrap: wrap;
+}
+
 .dashboard {
 	padding: 18px;
 }
@@ -610,6 +623,74 @@ button:hover {
 	gap: 10px;
 }
 
+.chatbot-box {
+	padding: 12px;
+	border-radius: 14px;
+	background: rgba(4, 13, 23, 0.68);
+	border: 1px solid rgba(156, 197, 220, 0.16);
+	display: grid;
+	gap: 10px;
+}
+
+.chatbot-head {
+	display: grid;
+	gap: 4px;
+}
+
+.chatbot-head p {
+	margin: 0;
+	font-size: 0.86rem;
+	color: var(--muted);
+}
+
+.chatbot-messages {
+	background: rgba(3, 10, 18, 0.8);
+	border: 1px solid rgba(156, 197, 220, 0.16);
+	border-radius: 10px;
+	padding: 10px;
+	display: grid;
+	gap: 8px;
+	max-height: 210px;
+	overflow: auto;
+}
+
+.chat-msg {
+	padding: 8px 10px;
+	border-radius: 10px;
+	line-height: 1.4;
+	font-size: 0.9rem;
+	white-space: pre-wrap;
+}
+
+.chat-msg-user {
+	background: rgba(41, 169, 255, 0.2);
+	border: 1px solid rgba(126, 216, 255, 0.32);
+	justify-self: end;
+	max-width: 95%;
+}
+
+.chat-msg-bot {
+	background: rgba(53, 240, 160, 0.16);
+	border: 1px solid rgba(53, 240, 160, 0.28);
+	justify-self: start;
+	max-width: 95%;
+}
+
+.chatbot-form {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+}
+
+.chatbot-form input {
+	min-width: 0;
+}
+
+.chatbot-form button {
+	padding: 10px 14px;
+	border-radius: 10px;
+}
+
 .analysis-row {
 	display: flex;
 	justify-content: space-between;
@@ -665,16 +746,123 @@ button:hover {
 	border: 1px solid rgba(156, 197, 220, 0.16);
 }
 
-#reportOutput {
+.report-title-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.report-source-badge {
+	font-size: 0.74rem;
+	padding: 4px 8px;
+	border-radius: 999px;
+	border: 1px solid rgba(156, 197, 220, 0.26);
+	background: rgba(10, 25, 41, 0.55);
+	color: #d6e7f7;
+	line-height: 1.2;
+}
+
+.report-source-openrouter {
+	background: rgba(53, 240, 160, 0.15);
+	border-color: rgba(53, 240, 160, 0.45);
+	color: #b9ffe3;
+}
+
+.report-source-fallback {
+	background: rgba(255, 201, 91, 0.14);
+	border-color: rgba(255, 201, 91, 0.42);
+	color: #ffefc4;
+}
+
+.report-output {
 	margin: 8px 0 0;
-	white-space: pre-wrap;
-	text-align: justify;
+	white-space: normal;
+	text-align: left;
 	line-height: 1.6;
 	background: rgba(3, 10, 18, 0.8);
 	padding: 12px;
 	border-radius: 10px;
 	max-height: 320px;
 	overflow: auto;
+}
+
+.report-section-title {
+	margin: 2px 0 6px;
+	font-size: 0.95rem;
+	color: #e5f3ff;
+	letter-spacing: 0.01em;
+}
+
+.report-line {
+	margin: 0;
+	font-size: 0.9rem;
+	color: #d5e4f2;
+}
+
+.report-spacer {
+	height: 8px;
+}
+
+.report-list {
+	margin: 0;
+	padding-left: 18px;
+	display: grid;
+	gap: 4px;
+	color: #d5e4f2;
+	font-size: 0.89rem;
+}
+
+.report-line strong,
+.report-list strong {
+	color: #f1fbff;
+	font-weight: 700;
+}
+
+.report-table-wrap {
+	width: 100%;
+	overflow-x: auto;
+	border-radius: 8px;
+	border: 1px solid rgba(156, 197, 220, 0.2);
+	background: rgba(8, 21, 34, 0.7);
+	margin: 2px 0 2px;
+}
+
+.report-table {
+	width: 100%;
+	border-collapse: collapse;
+	min-width: 560px;
+	font-size: 0.84rem;
+	line-height: 1.4;
+	color: #dbe8f5;
+}
+
+.report-table th,
+.report-table td {
+	border-bottom: 1px solid rgba(156, 197, 220, 0.18);
+	border-right: 1px solid rgba(156, 197, 220, 0.12);
+	padding: 7px 8px;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.report-table th:last-child,
+.report-table td:last-child {
+	border-right: 0;
+}
+
+.report-table thead th {
+	position: sticky;
+	top: 0;
+	background: rgba(20, 46, 70, 0.95);
+	color: #e8f7ff;
+	font-weight: 700;
+	z-index: 1;
+}
+
+.report-table tbody tr:hover {
+	background: rgba(126, 216, 255, 0.06);
 }
 
 .pred-correct {
@@ -726,6 +914,10 @@ button:hover {
 	.session-summary-text {
 		max-width: 100%;
 		text-align: left;
+	}
+
+	.chatbot-form {
+		grid-template-columns: 1fr;
 	}
 }
 
