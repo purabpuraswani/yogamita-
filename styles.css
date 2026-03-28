@@ -358,6 +358,34 @@ button:hover {
 	gap: 14px;
 }
 
+.report-visuals {
+	margin-top: 12px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 10px;
+}
+
+.report-visual-card {
+	background: rgba(10, 25, 41, 0.55);
+	border: 1px solid rgba(156, 197, 220, 0.22);
+	border-radius: 10px;
+	padding: 8px;
+}
+
+.report-visual-card h4 {
+	margin: 0 0 8px;
+	font-size: 0.9rem;
+	color: #d8e9f8;
+}
+
+.report-visual-card img {
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
+	display: block;
+	border: 1px solid rgba(156, 197, 220, 0.18);
+}
+
 .section-head {
 	display: flex;
 	justify-content: space-between;

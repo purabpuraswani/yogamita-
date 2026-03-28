@@ -13,6 +13,9 @@ import { PoseStream, estimateSideBendMagnitude } from './poseDetection.js';
 import { PredictionEngine } from './prediction.js';
 import { generateFeedback } from './feedback.js';
 import { generateYogaReport } from './report.js';
+import { processTemporalFramePipeline } from './temporalFrameProcessor.js';
+import { getValidStepSequenceFrames, getMajorStepSegments, buildSessionScoresFromMajorSegments, ensureAllStepSkeletons } from './sessionScoringPipeline.js';
+import { runEnhancedTemporalPipeline, buildTimingAnalysisFromSelectedFrames, validateAndGetAngles } from './enhancedTemporalPipeline.js';
 
 const appState = {
 	user: null,
@@ -1155,6 +1158,87 @@ function selectFrameFromStableSegments(stepFrames) {
 
 // ===================================================================
 
+// ================== NEW TEMPORAL FRAME PROCESSOR INTEGRATION ==================
+/**
+ * selectSignificantFramesWithTemporalProcessing
+ * 
+ * NEW PIPELINE: Uses temporalFrameProcessor to detect activity window and select
+ * frames based on stability analysis, yielding more reliable significant frames
+ * while avoiding transition/idle/relaxation frames.
+ * 
+ * Maintains API compatibility with the original selectSignificantFrames function
+ */
+function selectSignificantFramesWithTemporalProcessing(frameHistory) {
+	if (!Array.isArray(frameHistory) || frameHistory.length === 0) {
+		return {
+			step1: null,
+			step2: null,
+			step3: null,
+			worstFrame: null,
+			finalFrame: null,
+			step1MajorityLabel: null,
+			step2MajorityLabel: null,
+			step3MajorityLabel: null,
+		};
+	}
+
+	// Run the new temporal pipeline
+	const pipelineResult = processTemporalFramePipeline(frameHistory);
+	
+	// Extract frames and labels from pipeline
+	const step1Frame = pipelineResult.step1;
+	const step2Frame = pipelineResult.step2;
+	const step3Frame = pipelineResult.step3;
+
+	// Compute majority labels from the full frame history for consistency
+	const step1Frames = frameHistory.filter((f) => f?.step === 'step1');
+	const step2Frames = frameHistory.filter((f) => f?.step === 'step2');
+	const step3Frames = frameHistory.filter((f) => f?.step === 'step3');
+
+	const step1MajorityLabel = getMajorityStepLabel(step1Frames);
+	const step2MajorityLabel = getMajorityStepLabel(step2Frames);
+	const step3MajorityLabel = getMajorityStepLabel(step3Frames);
+
+	// Find worst and final frames for reporting
+	const incorrectFrames = frameHistory.filter((frame) => frame?.label === 'incorrect');
+	const worstFrame = incorrectFrames.length
+		? incorrectFrames.reduce((worst, current) => {
+			const worstConfidence = Number(worst.confidence) || 0;
+			const currentConfidence = Number(current.confidence) || 0;
+			return currentConfidence < worstConfidence ? current : worst;
+		})
+		: null;
+
+	const finalFrame = frameHistory[frameHistory.length - 1] || null;
+
+	// Log the pipeline results
+	console.log('=== TEMPORAL FRAME PROCESSOR INTEGRATION ===');
+	console.log('Pipeline Results:', {
+		step1Selected: step1Frame !== null,
+		step2Selected: step2Frame !== null,
+		step3Selected: step3Frame !== null,
+		selectionMethods: pipelineResult.selectionMethods,
+		effectiveConfidences: pipelineResult.effectiveConfidence,
+	});
+	console.log('Debug Log:', pipelineResult.debugLog);
+	console.log('=== END TEMPORAL INTEGRATION ===');
+
+	return {
+		step1: step1Frame,
+		step2: step2Frame,
+		step3: step3Frame,
+		worstFrame: worstFrame,
+		finalFrame: finalFrame,
+		step1MajorityLabel,
+		step2MajorityLabel,
+		step3MajorityLabel,
+		pipelineDebug: pipelineResult.debugLog,
+		averagePoses: pipelineResult.averagePose,
+		effectiveConfidences: pipelineResult.effectiveConfidence,
+	};
+}
+// =============================================================================
+
 function selectSignificantFrames(trimmedFrameHistory) {
 	if (!Array.isArray(trimmedFrameHistory) || trimmedFrameHistory.length === 0) {
 		return {
@@ -1403,30 +1487,58 @@ function buildTimingAnalysis({ trimmedFrameHistory, sessionStartTime, sessionDur
 	};
 }
 
+/**
+ * CORRECTED ANGLE ERROR CLASSIFICATION
+ * Thresholds: < 10° = Correct, 10-25° = Moderate, > 25° = Incorrect
+ */
 function classifyAngleError(error) {
 	if (!Number.isFinite(error)) {
 		return 'Unknown';
 	}
-	if (error < 5) {
+	if (error < 10) {
 		return 'Correct';
 	}
-	if (error <= 15) {
+	if (error <= 25) {
 		return 'Moderate';
 	}
 	return 'Incorrect';
 }
 
+/**
+ * CORRECTED STEP CLASSIFICATION BY AVERAGE ANGLE ERROR
+ * Thresholds: < 10° = Correct, 10-25° = Moderate, > 25° = Incorrect
+ */
 function classifyStepByAverageError(averageError) {
 	if (!Number.isFinite(averageError)) {
 		return 'Unknown';
 	}
-	if (averageError < 5) {
+	if (averageError < 10) {
 		return 'Correct';
 	}
-	if (averageError <= 15) {
+	if (averageError <= 25) {
 		return 'Moderate';
 	}
 	return 'Incorrect';
+}
+
+/**
+ * ANGLE ERROR COMPUTATION WITH > 180° HANDLING
+ * angleError = abs(userAngle - idealAngle)
+ * if angleError > 180: angleError = 360 - angleError
+ */
+function computeAngleErrorDegrees(userAngle, idealAngle) {
+	const user = Number(userAngle);
+	const ideal = Number(idealAngle);
+
+	if (!Number.isFinite(user) || !Number.isFinite(ideal)) {
+		return NaN;
+	}
+
+	let error = Math.abs(user - ideal);
+	if (error > 180) {
+		error = 360 - error;
+	}
+	return error;
 }
 
 function buildStepAngleFeedback({ stepKey, averageError, performance, correctCount, moderateCount, incorrectCount, dominantJointError }) {
@@ -1449,22 +1561,35 @@ function buildAngleAnalysis(significantFrames, idealPoseReference) {
 	const steps = ['step1', 'step2', 'step3'];
 	const stepAnalysis = {};
 
+	console.log('=== ANGLE ANALYSIS (SIGNIFICANT FRAMES ONLY) ===');
+	console.log('JOINT ANGLE ORDER:', JOINT_ANGLE_ORDER);
+
 	for (const stepKey of steps) {
 		const userAngles = toDegreesMaybeNormalized(significantFrames?.[stepKey]?.angles);
 		const idealAngles = Array.isArray(idealPoseReference?.[stepKey]?.idealAngles)
 			? toDegreesMaybeNormalized(idealPoseReference[stepKey].idealAngles)
 			: [];
 
+		console.log(`\n${stepKey.toUpperCase()} Analysis:`);
+		console.log(`  User Angles:   ${userAngles.map((a) => Number.isFinite(a) ? a.toFixed(1) : 'NaN').join(', ')}`);
+		console.log(`  Ideal Angles:  ${idealAngles.map((a) => Number.isFinite(a) ? a.toFixed(1) : 'NaN').join(', ')}`);
+
 		const jointCount = Math.min(userAngles.length, idealAngles.length);
 		const jointAnalysis = [];
+		const angleErrors = [];
+
 		for (let i = 0; i < jointCount; i += 1) {
 			const userAngle = Number(userAngles[i]);
 			const idealAngle = Number(idealAngles[i]);
-			const angleError = Number.isFinite(userAngle) && Number.isFinite(idealAngle)
-				? Math.abs(userAngle - idealAngle)
-				: NaN;
+			const angleError = computeAngleErrorDegrees(userAngle, idealAngle);
+			
+			if (Number.isFinite(angleError)) {
+				angleErrors.push(angleError);
+			}
+
 			jointAnalysis.push({
 				jointIndex: i,
+				jointName: JOINT_ANGLE_ORDER[i] || `joint${i}`,
 				userAngle,
 				idealAngle,
 				angleError,
@@ -1472,16 +1597,17 @@ function buildAngleAnalysis(significantFrames, idealPoseReference) {
 			});
 		}
 
-		const validErrors = jointAnalysis
-			.map((joint) => joint.angleError)
-			.filter((value) => Number.isFinite(value));
-		const averageError = validErrors.length
-			? validErrors.reduce((sum, value) => sum + value, 0) / validErrors.length
+		console.log(`  Angle Errors:  ${angleErrors.map((e) => e.toFixed(1)).join(', ')}°`);
+
+		const averageError = angleErrors.length
+			? angleErrors.reduce((sum, value) => sum + value, 0) / angleErrors.length
 			: null;
+		console.log(`  Average Error: ${Number.isFinite(averageError) ? averageError.toFixed(2) : 'N/A'}°`);
 
 		const correctCount = jointAnalysis.filter((joint) => joint.classification === 'Correct').length;
 		const moderateCount = jointAnalysis.filter((joint) => joint.classification === 'Moderate').length;
 		const incorrectCount = jointAnalysis.filter((joint) => joint.classification === 'Incorrect').length;
+		console.log(`  Classification: ${correctCount} Correct, ${moderateCount} Moderate, ${incorrectCount} Incorrect`);
 		const dominantJointError = jointAnalysis
 			.filter((joint) => Number.isFinite(joint.angleError))
 			.reduce((worst, current) => {
@@ -1492,6 +1618,8 @@ function buildAngleAnalysis(significantFrames, idealPoseReference) {
 			}, null);
 
 		const performance = classifyStepByAverageError(averageError);
+		console.log(`  Step Result: ${performance}`);
+
 		const feedback = buildStepAngleFeedback({
 			stepKey,
 			averageError,
@@ -1523,6 +1651,9 @@ function buildAngleAnalysis(significantFrames, idealPoseReference) {
 	const overallAverageError = stepAverageErrors.length
 		? stepAverageErrors.reduce((sum, value) => sum + value, 0) / stepAverageErrors.length
 		: null;
+
+	console.log(`\nOVERALL AVERAGE ERROR: ${Number.isFinite(overallAverageError) ? overallAverageError.toFixed(2) : 'N/A'}°`);
+	console.log('=== END ANGLE ANALYSIS ===');
 
 	return {
 		steps: stepAnalysis,
@@ -2248,60 +2379,99 @@ async function startSession() {
 }
 
 async function finalizeSessionAnalysis() {
-	console.log('Session Analysis Running');
-	let trimmedFrameHistory = trimSessionFrameHistory(appState.sessionPredictions);
-	trimmedFrameHistory = buildOrderedSessionFrameHistory(trimmedFrameHistory);
-	console.log('Total Session Frames:', appState.sessionPredictions.length);
-	const frameSummary = summarizeFrameLabels(trimmedFrameHistory);
-	console.log('Trimmed Frames:', trimmedFrameHistory.length);
-	console.log('Trimmed Frame Steps:', trimmedFrameHistory.map((f) => f.step));
-	const significantFrames = selectSignificantFrames(trimmedFrameHistory);
-	console.log('Significant Frames:', significantFrames);
-	const idealPoseReference = await loadIdealPoseReference();
-	const totalFrames = trimmedFrameHistory.length;
-	const totalScore = trimmedFrameHistory.reduce(
-		(sum, frame) => sum + getAdjustedFrameScore(frame.label, appState.userProfile?.age),
-		0
-	);
-	const averageScore = totalFrames ? totalScore / totalFrames : 0;
-	const thresholds = getSessionResultThresholds(appState.userProfile?.age);
-	const finalResult = averageScore >= thresholds.correctMin
-		? 'Correct'
-		: averageScore >= thresholds.moderateMin
-			? 'Moderate'
-			: 'Incorrect';
-	const durationMs = appState.sessionStartTime ? Date.now() - appState.sessionStartTime : 0;
-	const totalCapturedFrames = appState.sessionPredictions.length + appState.skippedFrameCount;
-	const timingAnalysis = buildTimingAnalysis({
-		trimmedFrameHistory,
-		sessionStartTime: appState.sessionStartTime,
-		sessionDurationMs: durationMs,
-		idealStepTimes: idealPoseReference,
+	console.log('=== COMPREHENSIVE TEMPORAL ANALYSIS PIPELINE (ENHANCED) ===');
+	console.log('Raw Session Frames:', appState.sessionPredictions.length);
+
+	// ==============================================================
+	// ENHANCED PIPELINE: All-in-one temporal analysis with consistency
+	// ==============================================================
+	
+	// STAGE 1: Run enhanced temporal pipeline (activity detection + frame selection)
+	const enhancedPipeline = runEnhancedTemporalPipeline(appState.sessionPredictions);
+	console.log('Enhanced Pipeline Result:', {
+		step1Selected: enhancedPipeline.frames?.step1 ? 'YES' : 'NO',
+		step2Selected: enhancedPipeline.frames?.step2 ? 'YES' : 'NO',
+		step3Selected: enhancedPipeline.frames?.step3 ? 'YES' : 'NO',
+		step1Tier: enhancedPipeline.selection?.step1?.tier,
+		step2Tier: enhancedPipeline.selection?.step2?.tier,
+		step3Tier: enhancedPipeline.selection?.step3?.tier,
 	});
-	console.log('Timing Analysis:', timingAnalysis);
-	const angleAnalysis = buildAngleAnalysis(significantFrames, idealPoseReference);
-	console.log('Angle Analysis:', angleAnalysis);
-	const skeletonImages = generateSkeletonImages(significantFrames, angleAnalysis);
-	const sessionScores = buildSessionScores({
-		trimmedFrameHistory,
+
+	// STAGE 2: Extract major segments for scoring
+	const majorSegments = enhancedPipeline.segments;
+	console.log('Major Segments:', {
+		step1Frames: majorSegments.step1?.length || 0,
+		step2Frames: majorSegments.step2?.length || 0,
+		step3Frames: majorSegments.step3?.length || 0,
+	});
+
+	// STAGE 3: Load reference data for angle comparison
+	const idealPoseReference = await loadIdealPoseReference();
+
+	// STAGE 4: Frame consistency - use SAME frames for all downstream analysis
+	const selectedFrames = enhancedPipeline.frames;
+	console.log('\nFrame Consistency Check:');
+	console.log('  step1: ' + (selectedFrames.step1?.timestamp ? `timestamp=${selectedFrames.step1.timestamp}` : 'null'));
+	console.log('  step2: ' + (selectedFrames.step2?.timestamp ? `timestamp=${selectedFrames.step2.timestamp}` : 'null'));
+	console.log('  step3: ' + (selectedFrames.step3?.timestamp ? `timestamp=${selectedFrames.step3.timestamp}` : 'null'));
+
+	// STAGE 5: Build angle analysis using SELECTED frames
+	console.log('\nStage: Angle Analysis');
+	const angleAnalysis = buildAngleAnalysis(selectedFrames, idealPoseReference);
+
+	// STAGE 6: Build timing analysis using SELECTED FRAME TIMESTAMPS (not all frames)
+	console.log('\nStage: Timing Analysis (from selected frame timestamps)');
+	const durationMs = appState.sessionStartTime ? Date.now() - appState.sessionStartTime : 0;
+	const timingAnalysis = buildTimingAnalysisFromSelectedFrames(selectedFrames, appState.sessionStartTime, idealPoseReference);
+	console.log('Timing:', {
+		step1FrameTime: timingAnalysis.userStep1Time?.toFixed(2),
+		step2FrameTime: timingAnalysis.userStep2Time?.toFixed(2),
+		step3FrameTime: timingAnalysis.userStep3Time?.toFixed(2),
+	});
+
+	// STAGE 7: Build session scores from MAJOR SEGMENTS
+	console.log('\nStage: Session Scoring (from major step segments)');
+	const sessionScores = buildSessionScoresFromMajorSegments({
+		majorSegments,
 		angleAnalysis,
 		timingAnalysis,
 	});
-	console.log('Session Scores:', sessionScores);
+
+	// STAGE 8: Generate skeleton images from SELECTED FRAMES (guaranteed to use same frames)
+	console.log('\nStage: Skeleton Generation');
+	const skeletonImages = generateSkeletonImages(selectedFrames, angleAnalysis);
+
+	// STAGE 9: Frame summary (using major segments for label distribution)
+	const frameSummary = {
+		correct: majorSegments.step1.filter(f => f?.label === 'correct').length +
+		         majorSegments.step2.filter(f => f?.label === 'correct').length +
+		         majorSegments.step3.filter(f => f?.label === 'correct').length,
+		moderate: majorSegments.step1.filter(f => f?.label === 'moderate').length +
+		          majorSegments.step2.filter(f => f?.label === 'moderate').length +
+		          majorSegments.step3.filter(f => f?.label === 'moderate').length,
+		incorrect: majorSegments.step1.filter(f => f?.label === 'incorrect').length +
+		           majorSegments.step2.filter(f => f?.label === 'incorrect').length +
+		           majorSegments.step3.filter(f => f?.label === 'incorrect').length,
+	};
+
+	// STAGE 10: Build improvements
 	const improvements = buildSessionImprovements({
-		totalFrames,
+		totalFrames: enhancedPipeline.validSequenceFrameCount,
 		correctFrameCount: frameSummary.correct,
 		moderateFrameCount: frameSummary.moderate,
 		incorrectFrameCount: frameSummary.incorrect,
 		skippedFrameCount: appState.skippedFrameCount,
 	});
+
+	// STAGE 11: Build final report
 	const sessionDate = new Date().toISOString();
+	const totalCapturedFrames = appState.sessionPredictions.length + appState.skippedFrameCount;
 	const finalReport = buildFinalSessionReport({
 		asanaName: appState.asana,
 		sessionDuration: formatDuration(durationMs),
 		sessionDurationMs: durationMs,
 		totalCapturedFrames,
-		totalFrames,
+		totalFrames: enhancedPipeline.validSequenceFrameCount,
 		skippedFrameCount: appState.skippedFrameCount,
 		timingAnalysis,
 		angleAnalysis,
@@ -2311,30 +2481,41 @@ async function finalizeSessionAnalysis() {
 		sessionDate,
 	});
 
+	// STAGE 12: Store results with full pipeline metadata
+	console.log('\n=== STORING SESSION REPORT ===');
 	appState.sessionReport = {
 		asanaName: appState.asana,
 		sessionDuration: formatDuration(durationMs),
 		sessionDurationMs: durationMs,
 		totalCapturedFrames,
-		totalFrames,
+		totalFrames: enhancedPipeline.validSequenceFrameCount,
 		correctFrameCount: frameSummary.correct,
 		moderateFrameCount: frameSummary.moderate,
 		incorrectFrameCount: frameSummary.incorrect,
 		skippedFrameCount: appState.skippedFrameCount,
-		averageScore,
-		finalResult,
+		averageScore: sessionScores.overallScore,
+		finalResult: sessionScores.overallScore >= 70 ? 'Correct' : sessionScores.overallScore >= 50 ? 'Moderate' : 'Incorrect',
 		leniencyApplied: isSeniorLeniencyEnabled(appState.userProfile?.age),
-		trimmedFrameHistory,
-		significantFrames,
+		selectedFrames,         // Frames used for all analyses (angle, timing, skeleton)
+		majorSegments,          // Frames used for scoring
 		timingAnalysis,
 		angleAnalysis,
 		sessionScores,
 		finalReport,
 		improvements,
+		pipelineMetadata: {
+			activityWindow: enhancedPipeline.activityWindow,
+			frameSelectionTiers: enhancedPipeline.selection,
+			validSequenceFrameCount: enhancedPipeline.validSequenceFrameCount,
+		},
 	};
 
-	console.log('Final Report Generated');
-	return { totalFrames, averageScore, finalResult };
+	console.log('=== ENHANCED ANALYSIS COMPLETE ===');
+	return { 
+		totalFrames: enhancedPipeline.validSequenceFrameCount, 
+		averageScore: sessionScores.overallScore, 
+		finalResult: appState.sessionReport.finalResult 
+	};
 }
 
 async function endSession() {
