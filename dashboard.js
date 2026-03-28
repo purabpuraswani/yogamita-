@@ -18,17 +18,17 @@ const FALLBACK_ASANA_CATALOG = [
 			{
 				title: 'Step 1',
 				caption: 'Stand tall with feet apart and raise one arm straight overhead.',
-				videoUrl: 'src/Long Konasana video with music.mp4',
+				videoUrl: '/poses/konasana-video.mp4',
 			},
 			{
 				title: 'Step 2',
 				caption: 'Bend sideways from the waist while keeping chest open and legs straight.',
-				videoUrl: 'src/Long Konasana video with music.mp4',
+				videoUrl: '/poses/konasana-video.mp4',
 			},
 			{
 				title: 'Step 3',
 				caption: 'Hold the posture with steady breathing, then return slowly to center.',
-				videoUrl: 'src/Long Konasana video with music.mp4',
+				videoUrl: '/poses/konasana-video.mp4',
 			},
 		],
 		photoLinks: [
@@ -36,7 +36,7 @@ const FALLBACK_ASANA_CATALOG = [
 			'src/konasana step 2.png',
 			'src/konasana step 3.png',
 		],
-		videoLinks: ['src/Long Konasana video with music.mp4'],
+			videoLinks: ['/poses/konasana-video.mp4'],
 		tutorialCaption: 'Follow this guided Konasana demo video.',
 	},
 ];
@@ -57,7 +57,7 @@ function getAsanaDataMap() {
 			faqs: Array.isArray(asana?.faqs) && asana.faqs.length ? asana.faqs : ['Details not available.'],
 			tutorialVideo: {
 				caption: asana?.tutorialCaption || 'Details not available.',
-				videoUrl: videoLinks[0] || 'src/Long Konasana video with music.mp4',
+					videoUrl: videoLinks[0] || '/poses/konasana-video.mp4',
 			},
 			poseImages: photoLinks.map((src, index) => ({
 				src,
@@ -81,8 +81,12 @@ function getPredictionClass(label) {
 export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onStartSession, onEndSession }) {
 	const dashboardView = document.getElementById('dashboardView');
 	const livePracticeView = document.getElementById('livePracticeView');
+	const reportView = document.getElementById('reportView');
 	const openLivePracticeBtn = document.getElementById('openLivePracticeBtn');
 	const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+	const openReportPageBtn = document.getElementById('openReportPageBtn');
+	const backToLivePracticeFromReportBtn = document.getElementById('backToLivePracticeFromReportBtn');
+	const backToDashboardFromReportBtn = document.getElementById('backToDashboardFromReportBtn');
 	const asanaSelect = document.getElementById('asanaSelect');
 	const asanaDescription = document.getElementById('asanaDescription');
 	const faqList = document.getElementById('faqList');
@@ -100,6 +104,15 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 	const endSessionBtn = document.getElementById('endSessionBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
 	const logoutBtnLive = document.getElementById('logoutBtnLive');
+	const logoutBtnReport = document.getElementById('logoutBtnReport');
+
+	const showOnlyView = (viewId) => {
+		const views = [dashboardView, livePracticeView, reportView].filter(Boolean);
+		for (const view of views) {
+			const shouldShow = view.id === viewId;
+			view.classList.toggle('hidden', !shouldShow);
+		}
+	};
 
 	const tutorialContexts = [
 		{
@@ -236,20 +249,38 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 
 	if (openLivePracticeBtn && dashboardView && livePracticeView) {
 		openLivePracticeBtn.addEventListener('click', () => {
-			dashboardView.classList.add('hidden');
-			livePracticeView.classList.remove('hidden');
+			showOnlyView('livePracticeView');
 		});
 	}
 
 	if (backToDashboardBtn && dashboardView && livePracticeView) {
 		backToDashboardBtn.addEventListener('click', () => {
-			livePracticeView.classList.add('hidden');
-			dashboardView.classList.remove('hidden');
+			showOnlyView('dashboardView');
+		});
+	}
+
+	if (openReportPageBtn && reportView) {
+		openReportPageBtn.addEventListener('click', () => {
+			showOnlyView('reportView');
+		});
+	}
+
+	if (backToLivePracticeFromReportBtn && livePracticeView) {
+		backToLivePracticeFromReportBtn.addEventListener('click', () => {
+			showOnlyView('livePracticeView');
+		});
+	}
+
+	if (backToDashboardFromReportBtn && dashboardView) {
+		backToDashboardFromReportBtn.addEventListener('click', () => {
+			showOnlyView('dashboardView');
 		});
 	}
 
 	asanaSelect.addEventListener('change', () => renderAsana(asanaSelect.value));
-	generateReportBtn.addEventListener('click', onGenerateReport);
+	if (generateReportBtn && typeof onGenerateReport === 'function') {
+		generateReportBtn.addEventListener('click', onGenerateReport);
+	}
 	if (startSessionBtn && typeof onStartSession === 'function') {
 		startSessionBtn.addEventListener('click', onStartSession);
 	}
@@ -262,8 +293,41 @@ export function initDashboard({ onAsanaChanged, onGenerateReport, onLogout, onSt
 	if (logoutBtnLive && typeof onLogout === 'function') {
 		logoutBtnLive.addEventListener('click', onLogout);
 	}
+	if (logoutBtnReport && typeof onLogout === 'function') {
+		logoutBtnReport.addEventListener('click', onLogout);
+	}
 
 	renderAsana(asanaSelect.value);
+}
+
+export function showDashboardView() {
+	const dashboardView = document.getElementById('dashboardView');
+	const livePracticeView = document.getElementById('livePracticeView');
+	const reportView = document.getElementById('reportView');
+
+	if (dashboardView) dashboardView.classList.remove('hidden');
+	if (livePracticeView) livePracticeView.classList.add('hidden');
+	if (reportView) reportView.classList.add('hidden');
+}
+
+export function showLivePracticeView() {
+	const dashboardView = document.getElementById('dashboardView');
+	const livePracticeView = document.getElementById('livePracticeView');
+	const reportView = document.getElementById('reportView');
+
+	if (dashboardView) dashboardView.classList.add('hidden');
+	if (livePracticeView) livePracticeView.classList.remove('hidden');
+	if (reportView) reportView.classList.add('hidden');
+}
+
+export function showReportView() {
+	const dashboardView = document.getElementById('dashboardView');
+	const livePracticeView = document.getElementById('livePracticeView');
+	const reportView = document.getElementById('reportView');
+
+	if (dashboardView) dashboardView.classList.add('hidden');
+	if (livePracticeView) livePracticeView.classList.add('hidden');
+	if (reportView) reportView.classList.remove('hidden');
 }
 
 export function renderPrediction({ label, confidence, score, feedback }) {
@@ -577,7 +641,7 @@ export function renderSessionSummary(sessionReport) {
 	const visibilityQuality = sessionReport.totalCapturedFrames
 		? ((sessionReport.totalCapturedFrames - sessionReport.skippedFrameCount) / sessionReport.totalCapturedFrames) * 100
 		: 0;
-	summaryEl.textContent = `Result: ${sessionReport.finalResult} | Avg: ${sessionReport.averageScore.toFixed(2)}/10 | Consistency: ${consistency.toFixed(0)}% | Visibility: ${visibilityQuality.toFixed(0)}% | Duration: ${sessionReport.sessionDuration}`;
+	summaryEl.textContent = `Result: ${sessionReport.finalResult} | Avg: ${sessionReport.averageScore.toFixed(2)}/100 | Consistency: ${consistency.toFixed(0)}% | Visibility: ${visibilityQuality.toFixed(0)}% | Duration: ${sessionReport.sessionDuration}`;
 }
 
 export function setWelcomeText(user) {

@@ -8,6 +8,8 @@ import {
 	renderSessionSummary,
 	setSessionControlState,
 	renderLiveCoachTip,
+	showDashboardView,
+	showReportView,
 } from './dashboard.js';
 import { PoseStream, estimateSideBendMagnitude } from './poseDetection.js';
 import { PredictionEngine } from './prediction.js';
@@ -55,20 +57,30 @@ const chatbotMessagesEl = document.getElementById('chatbotMessages');
 const chatbotFormEl = document.getElementById('chatbotForm');
 const chatbotInputEl = document.getElementById('chatbotInput');
 const chatbotSendBtnEl = document.getElementById('chatbotSendBtn');
+const reportAssistantToggleBtnEl = document.getElementById('reportAssistantToggle');
+const reportAssistantPanelEl = document.getElementById('reportAssistantPanel');
+const reportAssistantCloseBtnEl = document.getElementById('reportAssistantClose');
+const reportLoadingStateEl = document.getElementById('reportLoadingState');
+const reportLoadingTextEl = document.getElementById('reportLoadingText');
 const sessionFeedbackModalEl = document.getElementById('sessionFeedbackModal');
 const sessionFeedbackFormEl = document.getElementById('sessionFeedbackForm');
 const feedbackDiscomfortEl = document.getElementById('feedbackDiscomfort');
 const feedbackPainAreaWrapEl = document.getElementById('feedbackPainAreaWrap');
 const feedbackPainAreaEl = document.getElementById('feedbackPainArea');
+const feedbackPainIntensityWrapEl = document.getElementById('feedbackPainIntensityWrap');
+const feedbackPainIntensityEl = document.getElementById('feedbackPainIntensity');
 const feedbackSkipBtnEl = document.getElementById('feedbackSkipBtn');
 
 let latestReportText = '';
+const DEFAULT_CHATBOT_PLACEHOLDER = chatbotInputEl?.getAttribute('placeholder') || 'Ask your asana question...';
+const DEFAULT_CHATBOT_SEND_LABEL = chatbotSendBtnEl?.textContent || 'Send';
 
 const predictor = new PredictionEngine('/models');
 let poseStream = null;
 let busyPredicting = false;
 let lastPredictionAt = 0;
 let sessionActive = false;
+let reportGenerationInProgress = false;
 const STABLE_CAPTURE_FRAMES = 5;
 const STABLE_CAPTURE_MIN_CONFIDENCE = 0.55;
 
@@ -374,8 +386,13 @@ function summarizeSessionHistory(history) {
 			endedAt: entry.endedAt,
 			overallRating: entry.userFeedback.overallRating,
 			difficulty: entry.userFeedback.difficulty,
+			confidenceBeforeSession: entry.userFeedback.confidenceBeforeSession,
 			confidenceAfterSession: entry.userFeedback.confidenceAfterSession,
 			discomfortLevel: entry.userFeedback.discomfortLevel,
+			painIntensity: entry.userFeedback.painIntensity,
+			hardestStep: entry.userFeedback.hardestStep,
+			correctionFocus: entry.userFeedback.correctionFocus,
+			nextSessionGoal: entry.userFeedback.nextSessionGoal,
 			mainChallenge: entry.userFeedback.mainChallenge,
 			comment: entry.userFeedback.comment || '',
 		}));
@@ -444,6 +461,14 @@ function setFeedbackPainAreaVisibility(discomfortValue) {
 	if (feedbackPainAreaEl) {
 		feedbackPainAreaEl.required = needsPainArea;
 	}
+
+	if (feedbackPainIntensityWrapEl) {
+		feedbackPainIntensityWrapEl.classList.toggle('hidden', !needsPainArea);
+	}
+
+	if (feedbackPainIntensityEl) {
+		feedbackPainIntensityEl.required = needsPainArea;
+	}
 }
 
 function openSessionFeedbackModal() {
@@ -463,6 +488,72 @@ function closeSessionFeedbackModal() {
 	sessionFeedbackModalEl.classList.add('hidden');
 }
 
+function setReportGenerationLoading(isLoading, message = 'Generating your personalized report...') {
+	if (reportLoadingStateEl) {
+		reportLoadingStateEl.classList.toggle('hidden', !isLoading);
+	}
+
+	if (reportLoadingTextEl && message) {
+		reportLoadingTextEl.textContent = message;
+	}
+}
+
+function setReportAssistantOpen(isOpen) {
+	if (reportAssistantPanelEl) {
+		reportAssistantPanelEl.classList.toggle('hidden', !isOpen);
+	}
+
+	if (reportAssistantToggleBtnEl) {
+		reportAssistantToggleBtnEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+	}
+}
+
+function setReportAssistantAvailable(isAvailable) {
+	if (reportAssistantToggleBtnEl) {
+		reportAssistantToggleBtnEl.classList.toggle('hidden', !isAvailable);
+	}
+
+	if (!isAvailable) {
+		setReportAssistantOpen(false);
+	}
+}
+
+function setChatbotInteractionEnabled(isEnabled) {
+	if (chatbotInputEl) {
+		chatbotInputEl.disabled = !isEnabled;
+		chatbotInputEl.placeholder = isEnabled
+			? DEFAULT_CHATBOT_PLACEHOLDER
+			: 'Report is generating... chatbot will unlock automatically';
+	}
+
+	if (chatbotSendBtnEl) {
+		chatbotSendBtnEl.disabled = !isEnabled;
+		chatbotSendBtnEl.textContent = isEnabled ? DEFAULT_CHATBOT_SEND_LABEL : 'Locked';
+	}
+}
+
+async function transitionToGeneratedReportPage() {
+	if (reportGenerationInProgress) {
+		return;
+	}
+
+	reportGenerationInProgress = true;
+	showReportView();
+	setReportAssistantAvailable(false);
+	setReportGenerationLoading(true, 'Generating your report from latest session and feedback...');
+	renderStatus('Generating your session report and opening report page...');
+
+	try {
+		await handleGenerateReport();
+		renderStatus('Report generated. You can now ask personalized questions in chatbot.');
+	} catch (error) {
+		renderStatus(`Could not generate report automatically: ${error.message}`);
+	} finally {
+		setReportGenerationLoading(false);
+		reportGenerationInProgress = false;
+	}
+}
+
 function collectSessionFeedbackFromForm() {
 	const getValue = (id, fallback = '') => {
 		const el = document.getElementById(id);
@@ -471,24 +562,36 @@ function collectSessionFeedbackFromForm() {
 	};
 
 	const discomfortLevel = getValue('feedbackDiscomfort', 'none');
+	const confidenceBeforeSession = Number(getValue('feedbackConfidenceBefore', '3'));
+	const confidenceAfterSession = Number(getValue('feedbackConfidence', '3'));
 	const feedbackPayload = {
 		submittedAt: new Date().toISOString(),
 		overallRating: Number(getValue('feedbackOverallRating', '4')),
 		coachHelpfulness: Number(getValue('feedbackCoachHelpfulness', '4')),
 		difficulty: getValue('feedbackDifficulty', 'moderate'),
-		confidenceAfterSession: Number(getValue('feedbackConfidence', '3')),
+		confidenceBeforeSession,
+		confidenceAfterSession,
+		confidenceDelta: Number.isFinite(confidenceAfterSession) && Number.isFinite(confidenceBeforeSession)
+			? confidenceAfterSession - confidenceBeforeSession
+			: null,
 		discomfortLevel,
 		painArea: (discomfortLevel === 'mild' || discomfortLevel === 'pain')
 			? getValue('feedbackPainArea', 'other')
 			: null,
+		painIntensity: (discomfortLevel === 'mild' || discomfortLevel === 'pain')
+			? Number(getValue('feedbackPainIntensity', '3'))
+			: 0,
+		hardestStep: getValue('feedbackHardestStep', 'step2'),
+		correctionFocus: getValue('feedbackCorrectionFocus', 'spine_alignment'),
 		mainChallenge: getValue('feedbackMainChallenge', 'holding_pose'),
+		nextSessionGoal: getValue('feedbackNextSessionGoal', 'improve_accuracy'),
 		comment: getValue('feedbackComment', ''),
 	};
 
 	return feedbackPayload;
 }
 
-function handleSessionFeedbackSubmit(event) {
+async function handleSessionFeedbackSubmit(event) {
 	event.preventDefault();
 	const feedbackPayload = collectSessionFeedbackFromForm();
 	const stored = updateLatestSessionFeedbackInHistory(feedbackPayload);
@@ -499,6 +602,14 @@ function handleSessionFeedbackSubmit(event) {
 	} else {
 		renderStatus('Feedback received, but could not attach it to session history.');
 	}
+
+	await transitionToGeneratedReportPage();
+}
+
+async function handleSessionFeedbackSkip() {
+	closeSessionFeedbackModal();
+	renderStatus('Feedback skipped. Generating report from this completed session...');
+	await transitionToGeneratedReportPage();
 }
 
 async function handleChatbotSubmit(event) {
@@ -2963,7 +3074,7 @@ async function endSession() {
 		openSessionFeedbackModal();
 
 		const leniencyNote = appState.sessionReport.leniencyApplied ? ' (age-aware scoring applied)' : '';
-		renderStatus(`Session ended. Final result: ${finalResult} (${averageScore.toFixed(2)}/10)${leniencyNote}.`);
+		renderStatus(`Session ended. Final result: ${finalResult} (${averageScore.toFixed(2)}/100)${leniencyNote}.`);
 		return true;
 	} catch (error) {
 		console.error('endSession failed:', error);
@@ -3089,10 +3200,15 @@ function logoutUser() {
 	busyPredicting = false;
 	lastPredictionAt = 0;
 
+	showDashboardView();
 	document.getElementById('dashboardView').classList.add('hidden');
 	const livePracticeView = document.getElementById('livePracticeView');
 	if (livePracticeView) {
 		livePracticeView.classList.add('hidden');
+	}
+	const reportView = document.getElementById('reportView');
+	if (reportView) {
+		reportView.classList.add('hidden');
 	}
 	document.getElementById('profileModal').classList.add('hidden');
 	document.getElementById('loginView').classList.remove('hidden');
@@ -3291,6 +3407,10 @@ async function startRealtimePipeline() {
 }
 
 async function handleGenerateReport() {
+	setReportGenerationLoading(true, 'Generating your personalized report...');
+	setReportAssistantAvailable(false);
+	setChatbotInteractionEnabled(false);
+
 	if (!appState.sessionReport) {
 		if (hasRecoverableSessionData()) {
 			renderStatus('No finalized session report found. Finalizing session automatically...');
@@ -3301,6 +3421,8 @@ async function handleGenerateReport() {
 			renderReport('No session report available. Click Start Session, practice, then End Session before generating report.', null);
 			latestReportText = '';
 			setDownloadReportState(false);
+			setReportGenerationLoading(false);
+			setChatbotInteractionEnabled(true);
 			return;
 		}
 	}
@@ -3320,6 +3442,7 @@ async function handleGenerateReport() {
 	const visibilityQuality = source.totalCapturedFrames
 		? ((source.totalCapturedFrames - source.skippedFrameCount) / source.totalCapturedFrames) * 100
 		: 0;
+	const latestUserFeedback = source.userFeedback || null;
 	const sessionFeedback = [
 		`Session duration: ${source.sessionDuration}`,
 		`Pose checks completed: ${source.totalFrames}`,
@@ -3335,8 +3458,16 @@ async function handleGenerateReport() {
 		`Stable posture moments: ${source.correctFrameCount}`,
 		`Needs-adjustment moments: ${source.moderateFrameCount + source.incorrectFrameCount}`,
 		`Session final result: ${source.finalResult}`,
-		`Session average score: ${source.averageScore.toFixed(2)} / 10`,
+		`Session average score: ${source.averageScore.toFixed(2)} / 100`,
 		`Improvements needed: ${(source.improvements || []).join(' | ')}`,
+		`User feedback overall rating: ${latestUserFeedback?.overallRating ?? 'N/A'} / 5`,
+		`User feedback confidence: before=${latestUserFeedback?.confidenceBeforeSession ?? 'N/A'} / 5, after=${latestUserFeedback?.confidenceAfterSession ?? 'N/A'} / 5, delta=${Number.isFinite(Number(latestUserFeedback?.confidenceDelta)) ? Number(latestUserFeedback.confidenceDelta).toFixed(0) : 'N/A'}`,
+		`User feedback discomfort: level=${latestUserFeedback?.discomfortLevel || 'none'}, area=${latestUserFeedback?.painArea || 'N/A'}, intensity=${latestUserFeedback?.painIntensity ?? 'N/A'} / 10`,
+		`User feedback hardest step: ${latestUserFeedback?.hardestStep || 'N/A'}`,
+		`User feedback correction focus: ${latestUserFeedback?.correctionFocus || 'N/A'}`,
+		`User feedback main challenge: ${latestUserFeedback?.mainChallenge || 'N/A'}`,
+		`User feedback next session goal: ${latestUserFeedback?.nextSessionGoal || 'N/A'}`,
+		`User feedback coach helpfulness: ${latestUserFeedback?.coachHelpfulness ?? 'N/A'} / 5`,
 	];
 
 	const reportData = {
@@ -3381,6 +3512,7 @@ async function handleGenerateReport() {
 		});
 		latestReportText = reportResponse.text;
 		setDownloadReportState(true);
+		setReportAssistantAvailable(true);
 		console.log('Report Generated');
 	} catch (error) {
 		const fallbackText = `${finalReportText}\n\nNote: Could not generate OpenRouter report: ${error.message}`;
@@ -3391,6 +3523,10 @@ async function handleGenerateReport() {
 		});
 		latestReportText = fallbackText;
 		setDownloadReportState(true);
+		setReportAssistantAvailable(true);
+	} finally {
+		setReportGenerationLoading(false);
+		setChatbotInteractionEnabled(true);
 	}
 }
 
@@ -3437,6 +3573,19 @@ if (chatbotFormEl) {
 	chatbotFormEl.addEventListener('submit', handleChatbotSubmit);
 }
 
+if (reportAssistantToggleBtnEl) {
+	reportAssistantToggleBtnEl.addEventListener('click', () => {
+		const isHidden = reportAssistantPanelEl?.classList.contains('hidden');
+		setReportAssistantOpen(Boolean(isHidden));
+	});
+}
+
+if (reportAssistantCloseBtnEl) {
+	reportAssistantCloseBtnEl.addEventListener('click', () => {
+		setReportAssistantOpen(false);
+	});
+}
+
 if (feedbackDiscomfortEl) {
 	feedbackDiscomfortEl.addEventListener('change', (event) => {
 		setFeedbackPainAreaVisibility(String(event?.target?.value || 'none'));
@@ -3448,13 +3597,11 @@ if (sessionFeedbackFormEl) {
 }
 
 if (feedbackSkipBtnEl) {
-	feedbackSkipBtnEl.addEventListener('click', () => {
-		closeSessionFeedbackModal();
-		renderStatus('Feedback skipped. You can still continue practice and chat.');
-	});
+	feedbackSkipBtnEl.addEventListener('click', handleSessionFeedbackSkip);
 }
 
 setDownloadReportState(false);
+setReportAssistantAvailable(false);
 
 window.addEventListener('beforeunload', () => {
 	stopRealtimePipeline();

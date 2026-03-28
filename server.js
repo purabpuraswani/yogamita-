@@ -68,7 +68,7 @@ function buildPrompt(data) {
 		'Input data:',
 		`- Asana: ${data.asana}`,
 		`- Final prediction: ${data.prediction}`,
-		`- Average score: ${Number(data.score).toFixed(2)}/10`,
+		`- Average score: ${Number(data.score).toFixed(2)}/100`,
 		`- Age: ${data.age}`,
 		`- Flexibility level: ${data.flexibility}`,
 		`- Experience level: ${data.experience}`,
@@ -102,7 +102,7 @@ function fallbackReport(data) {
 	const totalCaptured = Number(session.totalCapturedFrames) || (totalAnalyzed + skippedFrames);
 	const correctRatio = totalAnalyzed ? ((correctFrames / totalAnalyzed) * 100).toFixed(1) : '0.0';
 	const skippedRatio = totalCaptured ? ((skippedFrames / totalCaptured) * 100).toFixed(1) : '0.0';
-	const targetScore = Math.min(10, avgScore + 1.0).toFixed(1);
+	const targetScore = Math.min(100, avgScore + 8.0).toFixed(1);
 	const visibilityQuality = (100 - Number(skippedRatio)).toFixed(1);
 	const overallAngleError = Number.isFinite(angle?.overallAverageError) ? Number(angle.overallAverageError).toFixed(2) : 'N/A';
 	const overallAnglePerf = angle?.overallPerformance || 'Unknown';
@@ -127,7 +127,7 @@ function fallbackReport(data) {
 		'## 1) Session Performance Summary',
 		`- Asana: ${data.asana}`,
 		`- Final Result: ${data.prediction}`,
-		`- Average Score: ${avgScore.toFixed(1)} / 10`,
+		`- Average Score: ${avgScore.toFixed(1)} / 100`,
 		`- Duration: ${session.duration || 'unknown'}`,
 		`- Session consistency: ${correctRatio}%`,
 		`- Visibility quality: ${visibilityQuality}%`,
@@ -169,7 +169,7 @@ function fallbackReport(data) {
 		'- If dizziness occurs, return to neutral stance and rest.',
 		'',
 		'## 7) Next Session Target Metrics',
-		`- Target average score: >= ${targetScore} / 10.`,
+		`- Target average score: >= ${targetScore} / 100.`,
 		`- Target consistency ratio: >= ${Math.min(95, Number(correctRatio) + 12).toFixed(0)}%.`,
 		`- Target visibility quality: >= ${Math.min(98, 100 - Math.max(5, Number(skippedRatio) - 8)).toFixed(0)}%.`,
 		`- Target overall average angle error: <= ${Number.isFinite(Number(overallAngleError)) ? Math.max(5, Number(overallAngleError) - 2).toFixed(2) : '12.00'}°`,
@@ -246,10 +246,16 @@ function buildChatPrompt(question, context) {
 			`overall=${feedback?.overallRating ?? 'N/A'}/5`,
 			`coachHelpfulness=${feedback?.coachHelpfulness ?? 'N/A'}/5`,
 			`difficulty=${feedback?.difficulty || 'N/A'}`,
+			`confidenceBefore=${feedback?.confidenceBeforeSession ?? 'N/A'}/5`,
 			`confidence=${feedback?.confidenceAfterSession ?? 'N/A'}/5`,
+			`confidenceDelta=${feedback?.confidenceDelta ?? 'N/A'}`,
 			`discomfort=${feedback?.discomfortLevel || 'none'}`,
 			`painArea=${feedback?.painArea || 'N/A'}`,
+			`painIntensity=${feedback?.painIntensity ?? 'N/A'}/10`,
+			`hardestStep=${feedback?.hardestStep || 'N/A'}`,
+			`correctionFocus=${feedback?.correctionFocus || 'N/A'}`,
 			`mainChallenge=${feedback?.mainChallenge || 'N/A'}`,
+			`nextSessionGoal=${feedback?.nextSessionGoal || 'N/A'}`,
 			`comment=${feedback?.comment || 'none'}`,
 		].join(', ');
 	};
@@ -261,7 +267,7 @@ function buildChatPrompt(question, context) {
 		return items
 			.map((item) => {
 				const date = item?.endedAt ? String(item.endedAt).split('T')[0] : 'unknown-date';
-				return `${date}: rating=${item?.overallRating ?? 'N/A'}/5, difficulty=${item?.difficulty || 'N/A'}, confidence=${item?.confidenceAfterSession ?? 'N/A'}/5, discomfort=${item?.discomfortLevel || 'none'}, challenge=${item?.mainChallenge || 'N/A'}, comment=${item?.comment || 'none'}`;
+				return `${date}: rating=${item?.overallRating ?? 'N/A'}/5, difficulty=${item?.difficulty || 'N/A'}, confidenceBefore=${item?.confidenceBeforeSession ?? 'N/A'}/5, confidence=${item?.confidenceAfterSession ?? 'N/A'}/5, pain=${item?.discomfortLevel || 'none'} (${item?.painArea || 'N/A'}, intensity=${item?.painIntensity ?? 'N/A'}/10), hardestStep=${item?.hardestStep || 'N/A'}, focus=${item?.correctionFocus || 'N/A'}, challenge=${item?.mainChallenge || 'N/A'}, nextGoal=${item?.nextSessionGoal || 'N/A'}, comment=${item?.comment || 'none'}`;
 			})
 			.join(' | ');
 	};

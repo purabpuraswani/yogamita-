@@ -155,6 +155,19 @@ function buildSessionScoresFromMajorSegments({ majorSegments, angleAnalysis, tim
 		const stepFrames = majorSegments[stepKey];
 		const stepFramesCount = stepFrames.length;
 
+		if (!stepFramesCount) {
+			perStep[stepKey] = {
+				frameCount: 0,
+				stepAccuracyScore: null,
+				angleAccuracyScore: null,
+				timingScore: null,
+				stabilityScore: null,
+				weightedScore: null,
+			};
+			console.log(`${stepKey}: 0 frames, excluded from overall score calculation`);
+			continue;
+		}
+
 		// Calculate step accuracy (label distribution)
 		const stepAccuracyScore = calculateStepAccuracyScore(stepFrames);
 
@@ -193,17 +206,21 @@ function buildSessionScoresFromMajorSegments({ majorSegments, angleAnalysis, tim
 		console.log(`${stepKey}: ${stepFramesCount} frames, accuracy=${stepAccuracyScore.toFixed(1)}, angle=${hasAngleData ? angleAccuracyScore?.toFixed(1) : 'N/A'}, timing=${timingScore?.toFixed(1)}, stability=${stabilityScore?.toFixed(1)}, weighted=${weightedStepScore.toFixed(1)}`);
 	}
 
-	const overallScore = clampScore(
-		(stepKeys.reduce((sum, stepKey) => sum + Number(perStep[stepKey]?.weightedScore || 0), 0)) / stepKeys.length
-	);
+	const validStepScores = stepKeys
+		.map((stepKey) => Number(perStep[stepKey]?.weightedScore))
+		.filter((value) => Number.isFinite(value));
+
+	const overallScore = validStepScores.length
+		? clampScore(validStepScores.reduce((sum, value) => sum + value, 0) / validStepScores.length)
+		: 0;
 
 	console.log(`OVERALL SCORE: ${overallScore.toFixed(1)}`);
 	console.log('=== END SESSION SCORING ===');
 
 	return {
-		step1Score: perStep.step1?.weightedScore || 0,
-		step2Score: perStep.step2?.weightedScore || 0,
-		step3Score: perStep.step3?.weightedScore || 0,
+		step1Score: Number.isFinite(perStep.step1?.weightedScore) ? perStep.step1.weightedScore : 0,
+		step2Score: Number.isFinite(perStep.step2?.weightedScore) ? perStep.step2.weightedScore : 0,
+		step3Score: Number.isFinite(perStep.step3?.weightedScore) ? perStep.step3.weightedScore : 0,
 		overallScore,
 		weights: {
 			angleAccuracy: 0.45,    // Highest weight

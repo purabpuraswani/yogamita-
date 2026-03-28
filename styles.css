@@ -214,15 +214,15 @@ button:hover {
 }
 
 .dashboard {
-	padding: 18px;
+	padding: 12px;
 }
 
 .header {
 	background: var(--card);
 	border: 1px solid var(--stroke);
 	border-radius: 18px;
-	padding: 16px;
-	margin-bottom: 16px;
+	padding: 12px;
+	margin-bottom: 12px;
 }
 
 .header-top {
@@ -278,7 +278,7 @@ button:hover {
 	background: var(--card);
 	border: 1px solid var(--stroke);
 	border-radius: 18px;
-	padding: 16px;
+	padding: 12px;
 }
 
 .left-panel {
@@ -407,6 +407,140 @@ button:hover {
 .live-practice-grid {
 	display: grid;
 	grid-template-columns: minmax(390px, 0.88fr) minmax(430px, 1.12fr);
+	gap: 10px;
+	align-items: start;
+}
+
+.live-practice-shell {
+	display: grid;
+	grid-template-columns: 180px 1fr;
+	gap: 10px;
+	align-items: start;
+}
+
+.live-hidden-meta {
+	height: 0;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.live-session-layout {
+	display: grid;
+	height: calc(100vh - 24px);
+	max-height: calc(100vh - 24px);
+	gap: 10px;
+	margin-top: 0;
+	grid-template-rows: minmax(0, 1fr) auto auto auto;
+}
+
+.live-top-row {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+	align-items: stretch;
+	min-height: 0;
+}
+
+.live-session-controls-row {
+	display: flex;
+	gap: 10px;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+.live-session-controls-row button {
+	min-width: 140px;
+	padding: 10px 16px;
+}
+
+.live-practice-view {
+	height: 100vh;
+	overflow: hidden;
+}
+
+.live-dual-cams {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+	align-items: start;
+}
+
+.live-side-rail {
+	display: grid;
+	gap: 10px;
+	align-content: start;
+	position: sticky;
+	top: 12px;
+}
+
+.live-side-brand h2 {
+	font-size: 1.1rem;
+}
+
+.live-side-meta {
+	margin: 0;
+	font-size: 0.82rem;
+	line-height: 1.35;
+	color: var(--muted);
+	word-break: break-word;
+}
+
+.live-main-stage {
+	display: grid;
+	gap: 10px;
+}
+
+.live-top-screens {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+	align-items: stretch;
+}
+
+.live-screen-card {
+	display: grid;
+	gap: 6px;
+	align-content: start;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	min-height: 0;
+}
+
+.live-screen-card h3 {
+	margin: 0;
+	font-size: 0.92rem;
+	color: #d6e9f9;
+}
+
+.live-tutorial-media {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+}
+
+.session-controls-mini {
+	justify-content: flex-start;
+	gap: 8px;
+}
+
+.session-controls-mini button {
+	padding: 8px 12px;
+	font-size: 0.85rem;
+	border-radius: 10px;
+}
+
+.live-bottom-panels {
+	display: grid;
+	grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+	gap: 10px;
+	align-items: start;
+}
+
+.report-only-grid {
+	display: grid;
+	grid-template-columns: 1fr;
 	gap: 14px;
 	align-items: start;
 }
@@ -414,8 +548,95 @@ button:hover {
 .live-left-panel,
 .live-right-panel {
 	display: grid;
-	gap: 14px;
+	gap: 10px;
 	align-content: start;
+}
+
+.camera-guide-text {
+	margin: -2px 0 0;
+	font-size: 0.86rem;
+	color: #b7cde0;
+	text-align: center;
+}
+
+.live-stats-row {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 10px;
+	min-height: 0;
+}
+
+.live-stat-card {
+	display: grid;
+	gap: 4px;
+	align-content: start;
+	min-height: 68px;
+	padding: 8px 10px;
+	border-radius: 12px;
+	background: rgba(4, 13, 23, 0.72);
+	border: 1px solid rgba(156, 197, 220, 0.2);
+}
+
+.live-stat-card span {
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.live-stat-card strong {
+	font-size: 0.98rem;
+	color: #eaf6ff;
+}
+
+.live-feedback-card {
+	min-height: 68px;
+}
+
+.live-feedback-card #feedbackList {
+	max-width: 100%;
+	max-height: 44px;
+	overflow: auto;
+	margin: 0;
+	padding-left: 16px;
+	display: grid;
+	gap: 2px;
+	font-size: 0.8rem;
+}
+
+.live-support-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	gap: 8px;
+	align-items: center;
+	padding: 8px 10px;
+	min-height: 62px;
+}
+
+.live-support-row .session-summary-row {
+	gap: 6px;
+	align-items: center;
+	display: grid;
+	grid-template-columns: auto 1fr;
+}
+
+.live-support-row .session-summary-row span {
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
+
+.live-support-row .session-summary-text {
+	max-width: 100%;
+	text-align: left;
+	font-size: 0.82rem;
+	line-height: 1.2;
+}
+
+.live-support-row .webcam-report-actions {
+	justify-content: flex-end;
+	margin: 0;
+}
+
+.live-support-row .webcam-report-actions button {
+	white-space: nowrap;
 }
 
 .practice-cam-column {
@@ -430,6 +651,41 @@ button:hover {
 	flex-wrap: wrap;
 }
 
+.report-loading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	border: 1px solid rgba(126, 216, 255, 0.34);
+	background: rgba(10, 25, 41, 0.65);
+	color: #dff2ff;
+}
+
+.report-loading p {
+	margin: 0;
+	font-size: 0.9rem;
+}
+
+.report-loading-spinner {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid rgba(126, 216, 255, 0.25);
+	border-top-color: #36f4a3;
+	animation: reportSpin 0.75s linear infinite;
+	flex: 0 0 16px;
+}
+
+@keyframes reportSpin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 .live-right-panel .video-card {
 	display: grid;
 	justify-items: center;
@@ -440,6 +696,18 @@ button:hover {
 .live-right-panel .webcam-report-actions {
 	width: 90%;
 	margin: 0 auto;
+}
+
+.live-screen-card video,
+.live-screen-card .annotated-wrap {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	aspect-ratio: 16 / 9;
+	max-height: none;
+	border-radius: 12px;
+	border: 1px solid rgba(156, 197, 220, 0.2);
+	background: #000;
 }
 
 .report-visuals {
@@ -492,6 +760,13 @@ button:hover {
 .tutorial-media-container > .tutorial-pose-gallery {
 	width: 100%;
 	height: 100%;
+}
+
+.live-practice-view .tutorial-media-container {
+	width: 100%;
+	margin: 0;
+	height: 100%;
+	aspect-ratio: auto;
 }
 
 #tutorialCaption {
@@ -584,10 +859,10 @@ button:hover {
 
 .live-right-panel .video-card video,
 .live-right-panel .annotated-wrap {
-	width: 90%;
+	width: 100%;
 	margin: 0 auto;
-	aspect-ratio: 4 / 3;
-	max-height: 300px;
+	aspect-ratio: 16 / 9;
+	max-height: 360px;
 }
 
 .annotated-wrap {
@@ -601,7 +876,14 @@ button:hover {
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
+	object-fit: contain;
+	background: #000;
+}
+
+#rawVideo,
+#markedVideo {
+	object-fit: contain;
+	background: #000;
 }
 
 .analysis-box {
@@ -784,8 +1066,37 @@ button:hover {
 	background: rgba(3, 10, 18, 0.8);
 	padding: 12px;
 	border-radius: 10px;
-	max-height: 320px;
+	max-height: 68vh;
 	overflow: auto;
+}
+
+.report-assistant-toggle {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	width: 74px;
+	height: 74px;
+	border-radius: 50%;
+	padding: 0;
+	font-size: 0.8rem;
+	text-align: center;
+	line-height: 1.1;
+	z-index: 30;
+	box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+}
+
+.report-assistant-panel {
+	position: fixed;
+	right: 20px;
+	bottom: 102px;
+	width: min(420px, calc(100vw - 24px));
+	z-index: 31;
+}
+
+.report-assistant-panel .chatbot-box {
+	box-shadow: 0 16px 32px rgba(0, 0, 0, 0.38);
+	background: rgba(7, 20, 33, 0.96);
+	backdrop-filter: blur(8px);
 }
 
 .report-section-title {
@@ -885,6 +1196,48 @@ button:hover {
 	.live-practice-grid {
 		grid-template-columns: 1fr;
 	}
+
+	.live-practice-shell {
+		grid-template-columns: 1fr;
+	}
+
+	.live-session-layout {
+		height: calc(100vh - 84px);
+		max-height: calc(100vh - 84px);
+		margin-top: 44px;
+	}
+
+	.live-side-rail {
+		position: static;
+		grid-template-columns: repeat(2, minmax(0, auto));
+		align-items: center;
+	}
+
+	.live-side-meta {
+		grid-column: 1 / -1;
+	}
+
+	.live-top-screens,
+	.live-bottom-panels {
+		grid-template-columns: 1fr;
+	}
+
+	.live-dual-cams {
+		grid-template-columns: 1fr;
+	}
+
+	.live-stats-row {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.live-support-row {
+		grid-template-columns: 1fr;
+		align-items: start;
+	}
+
+	.live-support-row .webcam-report-actions {
+		justify-content: flex-start;
+	}
 }
 
 @media (max-width: 760px) {
@@ -916,8 +1269,37 @@ button:hover {
 		text-align: left;
 	}
 
+	.live-practice-view {
+		overflow: auto;
+	}
+
+	.live-session-layout {
+		height: auto;
+		max-height: none;
+		grid-template-rows: auto;
+	}
+
+	.live-top-row,
+	.live-stats-row {
+		grid-template-columns: 1fr;
+	}
+
 	.chatbot-form {
 		grid-template-columns: 1fr;
+	}
+
+	.report-assistant-toggle {
+		right: 14px;
+		bottom: 14px;
+		width: 66px;
+		height: 66px;
+	}
+
+	.report-assistant-panel {
+		right: 12px;
+		left: 12px;
+		bottom: 92px;
+		width: auto;
 	}
 }
 

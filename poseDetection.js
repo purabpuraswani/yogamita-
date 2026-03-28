@@ -7,8 +7,15 @@ function clamp(value, min, max) {
 	return Math.min(Math.max(value, min), max);
 }
 
-function drawPose(ctx, detectorModel, pose, width, height) {
+function drawPose(ctx, detectorModel, pose, width, height, sourceVideoEl) {
 	ctx.clearRect(0, 0, width, height);
+
+	// Always paint the live camera frame first so the markers panel shows
+	// user video plus keypoints, even if the underlying video layer is hidden.
+	if (sourceVideoEl && sourceVideoEl.readyState >= 2) {
+		ctx.drawImage(sourceVideoEl, 0, 0, width, height);
+	}
+
 	if (!pose) {
 		return;
 	}
@@ -101,7 +108,12 @@ export class PoseStream {
 
 	async setupCamera() {
 		this.stream = await navigator.mediaDevices.getUserMedia({
-			video: { width: 640, height: 480, facingMode: 'user' },
+			video: {
+				width: { ideal: 1280 },
+				height: { ideal: 720 },
+				aspectRatio: { ideal: 16 / 9 },
+				facingMode: 'user',
+			},
 			audio: false,
 		});
 
@@ -131,7 +143,7 @@ export class PoseStream {
 			const pose = poses.length > 0 ? poses[0] : null;
 			const width = this.canvasEl.width;
 			const height = this.canvasEl.height;
-			drawPose(ctx, this.detectorModel, pose, width, height);
+			drawPose(ctx, this.detectorModel, pose, width, height, this.markedVideoEl);
 
 			this.onPoseFrame({
 				pose,

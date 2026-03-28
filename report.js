@@ -2,7 +2,7 @@ function fallbackReport(data) {
 	return [
 		`Asana: ${data.asana}`,
 		`Prediction: ${data.prediction}`,
-		`Score: ${data.score.toFixed(1)} / 10`,
+		`Score: ${data.score.toFixed(1)} / 100`,
 		`Age: ${data.age}`,
 		`Flexibility: ${data.flexibility}`,
 		`Experience: ${data.experience}`,
