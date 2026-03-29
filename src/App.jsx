@@ -290,11 +290,7 @@ export default function App() {
 							<h3>Anatomical Focus</h3>
 							<div id="anatomicalFocusContainer" className="focus-container"></div>
 						</div>
-						<div className="info-box">
-							<h3>FAQ</h3>
-							<ul id="faqList"></ul>
-				</div>
-			</aside>
+					</aside>
 
 					<section className="panel right-panel">
 						<div className="tutorial-wrap">
@@ -315,6 +311,39 @@ export default function App() {
 							<h3>Live Practice</h3>
 							<p>Open the dedicated practice page for instructor tutorial, session controls, analysis, and webcam posture tracking.</p>
 							<button id="openLivePracticeBtn" type="button" className="open-live-practice-btn">Open Live Practice Page</button>
+						</div>
+
+						<div className="info-box user-stats-box">
+							<h3><span role="img" aria-label="stats">📊</span> User Stats & Weekly Progress</h3>
+							<div className="stats-grid">
+								<div className="stat-card">
+									<div className="stat-label">Practice Time</div>
+									<div className="stat-value">120 mins</div>
+									<div className="stat-subtext">this week</div>
+								</div>
+								<div className="stat-card">
+									<div className="stat-label">Average Score</div>
+									<div className="stat-value">85%</div>
+									<div className="stat-subtext">Posture Accuracy</div>
+								</div>
+							</div>
+							<div className="recent-sessions">
+								<div className="recent-sessions-header">
+									<h4>Recent Sessions</h4>
+									<span className="streak-badge">3 Days Streak 🔥</span>
+								</div>
+								<ul className="recent-sessions-list">
+									<li>
+										<span>🧘‍♀️ Konasana</span><span>Today</span>
+									</li>
+									<li>
+										<span>🧘‍♀️ Trikonasana</span><span>Yesterday</span>
+									</li>
+									<li>
+										<span>🧘‍♀️ Vrikshasana</span><span>2 days ago</span>
+									</li>
+								</ul>
+							</div>
 						</div>
 					</section>
 				</div>

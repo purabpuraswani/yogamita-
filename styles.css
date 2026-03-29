@@ -1342,3 +1342,102 @@ button:hover {
 .start-practice-btn:hover { transform: scale(1.05); }
 
 .report-wrap, .practice-wrap { background: #1a1a1a; padding: 2rem; border-radius: 12px; }
+
+
+/* User Stats Box Components */
+.user-stats-box {
+  border-left: 3px solid var(--accent);
+  margin-top: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.stat-card {
+  background: rgba(10, 25, 41, 0.6);
+  border: 1px solid var(--stroke);
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-subtext {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.recent-sessions {
+  background: rgba(10, 25, 41, 0.6);
+  border: 1px solid var(--stroke);
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.recent-sessions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.recent-sessions-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.streak-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffb74d; /* Warm orange */
+  background: rgba(255, 152, 0, 0.15);
+  padding: 4px 8px;
+  border-radius: 20px;
+}
+
+.recent-sessions-list {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.recent-sessions-list li {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--stroke);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.recent-sessions-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.recent-sessions-list li span:last-child {
+  color: var(--muted);
+}
+
+
+
+
