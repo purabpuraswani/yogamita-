@@ -16,7 +16,7 @@ function fallbackReport(data) {
 }
 
 export async function generateYogaReport({ data }) {
-	const response = await fetch('/api/report', {
+	const response = await fetch('/api/sedentary/report', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ data }),

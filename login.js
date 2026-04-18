@@ -1,5 +1,6 @@
-const SESSION_KEY = 'yogmitra_session';
-const PROFILES_KEY = 'yogmitra_profiles';
+const SESSION_KEY = 'sedentary_session';
+const PROFILES_KEY = 'sedentary_profiles';
+const USERS_KEY = 'sedentary_users';
 
 export function initLogin({ onLoginSuccess, onProfileSubmit }) {
 	const loginView = document.getElementById('loginView');
@@ -22,14 +23,20 @@ export function initLogin({ onLoginSuccess, onProfileSubmit }) {
 
 	const profileForm = document.getElementById('profileForm');
 	const profileAge = document.getElementById('profileAge');
+	const profileHeightCm = document.getElementById('profileHeightCm');
+	const profileWeightKg = document.getElementById('profileWeightKg');
 	const profileFlexibility = document.getElementById('profileFlexibility');
 	const profileExperience = document.getElementById('profileExperience');
+	const profileActivityLevel = document.getElementById('profileActivityLevel');
+	const profileEatingHabits = document.getElementById('profileEatingHabits');
+	const profileSleepHours = document.getElementById('profileSleepHours');
+	const profileHealthNotes = document.getElementById('profileHealthNotes');
 	let activeUser = null;
 	let isSignUpMode = false;
 
 	function getUsers() {
 		try {
-			const parsed = JSON.parse(localStorage.getItem('yogmitra_users') || '[]');
+			const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
 			return Array.isArray(parsed) ? parsed : [];
 		} catch (_error) {
 			return [];
@@ -37,7 +44,7 @@ export function initLogin({ onLoginSuccess, onProfileSubmit }) {
 	}
 
 	function saveUsers(users) {
-		localStorage.setItem('yogmitra_users', JSON.stringify(users));
+		localStorage.setItem(USERS_KEY, JSON.stringify(users));
 	}
 
 	function findUserIndexByEmail(users, email) {
@@ -192,10 +199,26 @@ export function initLogin({ onLoginSuccess, onProfileSubmit }) {
 		event.preventDefault();
 
 		const age = Math.min(60, Math.max(20, Number(profileAge.value) || 30));
+		const heightCm = Math.min(220, Math.max(120, Number(profileHeightCm?.value) || 170));
+		const weightKg = Math.min(200, Math.max(30, Number(profileWeightKg?.value) || 70));
 		const flexibility = profileFlexibility.value;
 		const experience = profileExperience.value;
+		const activityLevel = profileActivityLevel?.value || 'moderate';
+		const eatingHabits = profileEatingHabits?.value || 'balanced';
+		const sleepHours = Math.min(12, Math.max(3, Number(profileSleepHours?.value) || 7));
+		const healthNotes = String(profileHealthNotes?.value || '').trim();
 
-		const profile = { age, flexibility, experience };
+		const profile = {
+			age,
+			heightCm,
+			weightKg,
+			flexibility,
+			experience,
+			activityLevel,
+			eatingHabits,
+			sleepHours,
+			healthNotes,
+		};
 		if (activeUser) {
 			const users = getUsers();
 			const userIndex = findUserIndexByEmail(users, activeUser.email);

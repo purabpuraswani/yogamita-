@@ -377,7 +377,7 @@ function fallbackChatReply(question, context) {
 	return base.join('\n');
 }
 
-app.post('/api/report', async (req, res) => {
+app.post('/api/sedentary/report', async (req, res) => {
 	try {
 		const payload = req.body?.data;
 		if (!payload) {
@@ -449,7 +449,7 @@ app.post('/api/report', async (req, res) => {
 	}
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/sedentary/chat', async (req, res) => {
 	try {
 		const question = String(req.body?.question || '').trim();
 		const context = req.body?.context || {};
@@ -512,6 +512,12 @@ app.post('/api/chat', async (req, res) => {
 			reason: 'server_error',
 		});
 	}
+});
+
+app.use('/api', (_req, res) => {
+	res.status(404).json({
+		error: 'Invalid API route. Use /api/sedentary/*',
+	});
 });
 
 app.use((_req, res) => {

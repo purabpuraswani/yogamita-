@@ -1,0 +1,1190 @@
+﻿=== Step Classification Calibration Report (Recorded Dataset) ===
+Total frames: 315
+
+STEP1/STEP2 OVERLAP REPORT (real recorded data):
+{
+  "spine": {
+    "step1": {
+      "count": 105,
+      "min": 0.004,
+      "p10": 0.101,
+      "p50": 0.883,
+      "p90": 3.853,
+      "max": 87.402
+    },
+    "step2": {
+      "count": 105,
+      "min": 0.086,
+      "p10": 0.334,
+      "p50": 1.256,
+      "p90": 4.178,
+      "max": 9.832
+    },
+    "overlap": {
+      "start": 0.086,
+      "end": 9.832,
+      "width": 9.746
+    }
+  },
+  "shoulder": {
+    "step1": {
+      "count": 105,
+      "min": -0.5,
+      "p10": -0.5,
+      "p50": -0.5,
+      "p90": -0.002,
+      "max": 0.504
+    },
+    "step2": {
+      "count": 105,
+      "min": -0.5,
+      "p10": -0.009,
+      "p50": 0.779,
+      "p90": 0.951,
+      "max": 1.064
+    },
+    "overlap": {
+      "start": -0.5,
+      "end": 0.504,
+      "width": 1.004
+    }
+  },
+  "hip": {
+    "step1": {
+      "count": 105,
+      "min": 3.616,
+      "p10": 164.009,
+      "p50": 166.779,
+      "p90": 174.093,
+      "max": 177.051
+    },
+    "step2": {
+      "count": 105,
+      "min": 153.89,
+      "p10": 157.413,
+      "p50": 164.381,
+      "p90": 177.313,
+      "max": 179.418
+    },
+    "overlap": {
+      "start": 153.89,
+      "end": 177.051,
+      "width": 23.161
+    }
+  }
+}
+
+=== BEFORE_CALIBRATION ===
+{
+  "step1": {
+    "step1": 105,
+    "step2": 0,
+    "step3": 0
+  },
+  "step2": {
+    "step1": 10,
+    "step2": 95,
+    "step3": 0
+  },
+  "step3": {
+    "step1": 15,
+    "step2": 27,
+    "step3": 63
+  }
+}
+STEP1 accuracy: 100.00%
+STEP2 accuracy: 90.48%
+STEP3 accuracy: 60.00%
+STEP2->STEP1 misclassification rate: 9.52%
+Uncertain (gap<0): 0
+Feature Means by True Step:
+{
+  "step1": {
+    "count": 105,
+    "spine": 6.854,
+    "shoulder": -0.374,
+    "hip": 156.989,
+    "elbow": 170.761,
+    "symmetry": 0.98
+  },
+  "step2": {
+    "count": 105,
+    "spine": 1.853,
+    "shoulder": 0.615,
+    "hip": 164.827,
+    "elbow": 166.916,
+    "symmetry": 0.749
+  },
+  "step3": {
+    "count": 105,
+    "spine": 38.673,
+    "shoulder": 0.614,
+    "hip": 134.341,
+    "elbow": 144.46,
+    "symmetry": 0.647
+  }
+}
+Average Step Scores by True Step:
+{
+  "step1": {
+    "step1": 0.775,
+    "step2": 0.44,
+    "step3": 0.332
+  },
+  "step2": {
+    "step1": 0.659,
+    "step2": 0.936,
+    "step3": 0.415
+  },
+  "step3": {
+    "step1": 0.371,
+    "step2": 0.699,
+    "step3": 0.898
+  }
+}
+First confusion cases:
+[
+  {
+    "frame": 106,
+    "expected": "step2",
+    "rawStep": "step2",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.457,
+    "stepScores": {
+      "step1": 0.56,
+      "step2": 1.017,
+      "step3": 0.45
+    },
+    "stepFeatures": {
+      "spine": 1.39,
+      "shoulder": 0.588,
+      "hip": 162.3
+    }
+  },
+  {
+    "frame": 107,
+    "expected": "step2",
+    "rawStep": "step2",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.46,
+    "stepScores": {
+      "step1": 0.56,
+      "step2": 1.02,
+      "step3": 0.45
+    },
+    "stepFeatures": {
+      "spine": 1.58,
+      "shoulder": 0.797,
+      "hip": 163.33
+    }
+  },
+  {
+    "frame": 180,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.37,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.39,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 0.39,
+      "shoulder": -0.5,
+      "hip": 162.01
+    }
+  },
+  {
+    "frame": 181,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.375,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.385,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 0.09,
+      "shoulder": -0.5,
+      "hip": 161.23
+    }
+  },
+  {
+    "frame": 182,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.372,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.388,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 0.3,
+      "shoulder": -0.5,
+      "hip": 160.12
+    }
+  },
+  {
+    "frame": 183,
+    "expected": "step2",
+    "rawStep": "step2",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.468,
+    "stepScores": {
+      "step1": 0.56,
+      "step2": 1.028,
+      "step3": 0.45
+    },
+    "stepFeatures": {
+      "spine": 2.01,
+      "shoulder": 0.906,
+      "hip": 157.76
+    }
+  },
+  {
+    "frame": 184,
+    "expected": "step2",
+    "rawStep": "step2",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.447,
+    "stepScores": {
+      "step1": 0.56,
+      "step2": 1.007,
+      "step3": 0.45
+    },
+    "stepFeatures": {
+      "spine": 1.81,
+      "shoulder": 0.968,
+      "hip": 157.48
+    }
+  },
+  {
+    "frame": 208,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.512,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.608,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.18,
+      "shoulder": 0.007,
+      "hip": 169.15
+    }
+  },
+  {
+    "frame": 209,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.497,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.623,
+      "step3": 0.336
+    },
+    "stepFeatures": {
+      "spine": 1.43,
+      "shoulder": 0.001,
+      "hip": 169.19
+    }
+  },
+  {
+    "frame": 210,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.531,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.589,
+      "step3": 0.33
+    },
+    "stepFeatures": {
+      "spine": 0.94,
+      "shoulder": -0.026,
+      "hip": 167.92
+    }
+  },
+  {
+    "frame": 211,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.2,
+    "stepScores": {
+      "step1": 0.211,
+      "step2": 0.95,
+      "step3": 1.15
+    },
+    "stepFeatures": {
+      "spine": 40.92,
+      "shoulder": 0.785,
+      "hip": 134.37
+    }
+  },
+  {
+    "frame": 212,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.15,
+    "stepScores": {
+      "step1": 0.32,
+      "step2": 1,
+      "step3": 1.15
+    },
+    "stepFeatures": {
+      "spine": 36.36,
+      "shoulder": 0.526,
+      "hip": 140.56
+    }
+  }
+]
+Sample [STEP CLASSIFICATION DEBUG] style rows:
+[
+  {
+    "frame": 1,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.369,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.391,
+      "step3": 0.298
+    },
+    "stepFeatures": {
+      "spine": 0.44,
+      "shoulder": -0.5,
+      "hip": 166.32
+    }
+  },
+  {
+    "frame": 2,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.376,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.384,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 0.02,
+      "shoulder": -0.5,
+      "hip": 165.89
+    }
+  },
+  {
+    "frame": 3,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.336,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.424,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 2.38,
+      "shoulder": -0.5,
+      "hip": 164.7
+    }
+  },
+  {
+    "frame": 4,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.318,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.442,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 3.41,
+      "shoulder": -0.5,
+      "hip": 164.04
+    }
+  },
+  {
+    "frame": 5,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.375,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.385,
+      "step3": 0.3
+    },
+    "stepFeatures": {
+      "spine": 0.09,
+      "shoulder": -0.5,
+      "hip": 165.86
+    }
+  },
+  {
+    "frame": 6,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.368,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.392,
+      "step3": 0.295
+    },
+    "stepFeatures": {
+      "spine": 0.5,
+      "shoulder": -0.5,
+      "hip": 166.71
+    }
+  },
+  {
+    "frame": 7,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.367,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.393,
+      "step3": 0.298
+    },
+    "stepFeatures": {
+      "spine": 0.57,
+      "shoulder": -0.5,
+      "hip": 166.32
+    }
+  },
+  {
+    "frame": 8,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.376,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.384,
+      "step3": 0.289
+    },
+    "stepFeatures": {
+      "spine": 0.02,
+      "shoulder": -0.5,
+      "hip": 167.49
+    }
+  },
+  {
+    "frame": 9,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.37,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.39,
+      "step3": 0.288
+    },
+    "stepFeatures": {
+      "spine": 0.36,
+      "shoulder": -0.5,
+      "hip": 167.52
+    }
+  },
+  {
+    "frame": 10,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.332,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.428,
+      "step3": 0.295
+    },
+    "stepFeatures": {
+      "spine": 2.62,
+      "shoulder": -0.5,
+      "hip": 166.68
+    }
+  },
+  {
+    "frame": 11,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.32,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.44,
+      "step3": 0.294
+    },
+    "stepFeatures": {
+      "spine": 3.29,
+      "shoulder": -0.5,
+      "hip": 166.74
+    }
+  },
+  {
+    "frame": 12,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.368,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.392,
+      "step3": 0.28
+    },
+    "stepFeatures": {
+      "spine": 0.49,
+      "shoulder": -0.5,
+      "hip": 168.62
+    }
+  },
+  {
+    "frame": 13,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.367,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.393,
+      "step3": 0.291
+    },
+    "stepFeatures": {
+      "spine": 0.53,
+      "shoulder": -0.5,
+      "hip": 167.17
+    }
+  },
+  {
+    "frame": 14,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.374,
+    "stepScores": {
+      "step1": 0.76,
+      "step2": 0.386,
+      "step3": 0.295
+    },
+    "stepFeatures": {
+      "spine": 0.16,
+      "shoulder": -0.5,
+      "hip": 166.59
+    }
+  }
+]
+
+=== AFTER_CALIBRATION ===
+{
+  "step1": {
+    "step1": 105,
+    "step2": 0,
+    "step3": 0
+  },
+  "step2": {
+    "step1": 6,
+    "step2": 99,
+    "step3": 0
+  },
+  "step3": {
+    "step1": 15,
+    "step2": 24,
+    "step3": 66
+  }
+}
+STEP1 accuracy: 100.00%
+STEP2 accuracy: 94.29%
+STEP3 accuracy: 62.86%
+STEP2->STEP1 misclassification rate: 5.71%
+Uncertain (gap<0.1): 14
+Feature Means by True Step:
+{
+  "step1": {
+    "count": 105,
+    "spine": 6.854,
+    "shoulder": -0.374,
+    "hip": 156.989,
+    "elbow": 170.761,
+    "symmetry": 0.98
+  },
+  "step2": {
+    "count": 105,
+    "spine": 1.853,
+    "shoulder": 0.615,
+    "hip": 164.827,
+    "elbow": 166.916,
+    "symmetry": 0.749
+  },
+  "step3": {
+    "count": 105,
+    "spine": 38.673,
+    "shoulder": 0.614,
+    "hip": 134.341,
+    "elbow": 144.46,
+    "symmetry": 0.647
+  }
+}
+Average Step Scores by True Step:
+{
+  "step1": {
+    "step1": 0.704,
+    "step2": 0.537,
+    "step3": 0.366
+  },
+  "step2": {
+    "step1": 0.533,
+    "step2": 1.199,
+    "step3": 0.462
+  },
+  "step3": {
+    "step1": 0.305,
+    "step2": 0.519,
+    "step3": 0.945
+  }
+}
+First confusion cases:
+[
+  {
+    "frame": 180,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.39,
+      "shoulder": -0.5,
+      "hip": 162.01
+    }
+  },
+  {
+    "frame": 181,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.09,
+      "shoulder": -0.5,
+      "hip": 161.23
+    }
+  },
+  {
+    "frame": 182,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.3,
+      "shoulder": -0.5,
+      "hip": 160.12
+    }
+  },
+  {
+    "frame": 208,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.35,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.77,
+      "step3": 0.375
+    },
+    "stepFeatures": {
+      "spine": 0.18,
+      "shoulder": 0.007,
+      "hip": 169.15
+    }
+  },
+  {
+    "frame": 209,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.357,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.763,
+      "step3": 0.371
+    },
+    "stepFeatures": {
+      "spine": 1.43,
+      "shoulder": 0.001,
+      "hip": 169.19
+    }
+  },
+  {
+    "frame": 210,
+    "expected": "step2",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.389,
+    "stepScores": {
+      "step1": 1.12,
+      "step2": 0.731,
+      "step3": 0.367
+    },
+    "stepFeatures": {
+      "spine": 0.94,
+      "shoulder": -0.026,
+      "hip": 167.92
+    }
+  },
+  {
+    "frame": 211,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.598,
+    "stepScores": {
+      "step1": 0.101,
+      "step2": 0.592,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 40.92,
+      "shoulder": 0.785,
+      "hip": 134.37
+    }
+  },
+  {
+    "frame": 212,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.526,
+    "stepScores": {
+      "step1": 0.201,
+      "step2": 0.664,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 36.36,
+      "shoulder": 0.526,
+      "hip": 140.56
+    }
+  },
+  {
+    "frame": 213,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.618,
+    "stepScores": {
+      "step1": 0.083,
+      "step2": 0.572,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 48.9,
+      "shoulder": 0.58,
+      "hip": 130.4
+    }
+  },
+  {
+    "frame": 214,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.598,
+    "stepScores": {
+      "step1": 0.097,
+      "step2": 0.592,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 37.79,
+      "shoulder": 0.678,
+      "hip": 133.36
+    }
+  },
+  {
+    "frame": 215,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.585,
+    "stepScores": {
+      "step1": 0.113,
+      "step2": 0.605,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 39.12,
+      "shoulder": 0.684,
+      "hip": 136.93
+    }
+  },
+  {
+    "frame": 216,
+    "expected": "step3",
+    "rawStep": "step3",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.602,
+    "stepScores": {
+      "step1": 0.098,
+      "step2": 0.588,
+      "step3": 1.19
+    },
+    "stepFeatures": {
+      "spine": 42.02,
+      "shoulder": 0.708,
+      "hip": 133.62
+    }
+  }
+]
+Sample [STEP CLASSIFICATION DEBUG] style rows:
+[
+  {
+    "frame": 1,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.337
+    },
+    "stepFeatures": {
+      "spine": 0.44,
+      "shoulder": -0.5,
+      "hip": 166.32
+    }
+  },
+  {
+    "frame": 2,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.02,
+      "shoulder": -0.5,
+      "hip": 165.89
+    }
+  },
+  {
+    "frame": 3,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 2.38,
+      "shoulder": -0.5,
+      "hip": 164.7
+    }
+  },
+  {
+    "frame": 4,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 3.41,
+      "shoulder": -0.5,
+      "hip": 164.04
+    }
+  },
+  {
+    "frame": 5,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.34
+    },
+    "stepFeatures": {
+      "spine": 0.09,
+      "shoulder": -0.5,
+      "hip": 165.86
+    }
+  },
+  {
+    "frame": 6,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.333
+    },
+    "stepFeatures": {
+      "spine": 0.5,
+      "shoulder": -0.5,
+      "hip": 166.71
+    }
+  },
+  {
+    "frame": 7,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.337
+    },
+    "stepFeatures": {
+      "spine": 0.57,
+      "shoulder": -0.5,
+      "hip": 166.32
+    }
+  },
+  {
+    "frame": 8,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.326
+    },
+    "stepFeatures": {
+      "spine": 0.02,
+      "shoulder": -0.5,
+      "hip": 167.49
+    }
+  },
+  {
+    "frame": 9,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.326
+    },
+    "stepFeatures": {
+      "spine": 0.36,
+      "shoulder": -0.5,
+      "hip": 167.52
+    }
+  },
+  {
+    "frame": 10,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.334
+    },
+    "stepFeatures": {
+      "spine": 2.62,
+      "shoulder": -0.5,
+      "hip": 166.68
+    }
+  },
+  {
+    "frame": 11,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.333
+    },
+    "stepFeatures": {
+      "spine": 3.29,
+      "shoulder": -0.5,
+      "hip": 166.74
+    }
+  },
+  {
+    "frame": 12,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.316
+    },
+    "stepFeatures": {
+      "spine": 0.49,
+      "shoulder": -0.5,
+      "hip": 168.62
+    }
+  },
+  {
+    "frame": 13,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.329
+    },
+    "stepFeatures": {
+      "spine": 0.53,
+      "shoulder": -0.5,
+      "hip": 167.17
+    }
+  },
+  {
+    "frame": 14,
+    "expected": "step1",
+    "rawStep": "step1",
+    "smoothedStep": "step1",
+    "uncertain": false,
+    "scoreGap": 0.17,
+    "stepScores": {
+      "step1": 0.67,
+      "step2": 0.5,
+      "step3": 0.335
+    },
+    "stepFeatures": {
+      "spine": 0.16,
+      "shoulder": -0.5,
+      "hip": 166.59
+    }
+  }
+]
+
+=== BEFORE vs AFTER ===
+{
+  "step1Acc": {
+    "before": 100,
+    "after": 100,
+    "delta": 0
+  },
+  "step2Acc": {
+    "before": 90.48,
+    "after": 94.29,
+    "delta": 3.81
+  },
+  "step3Acc": {
+    "before": 60,
+    "after": 62.86,
+    "delta": 2.86
+  },
+  "step2ToStep1MisRate": {
+    "before": 9.52,
+    "after": 5.71,
+    "delta": -3.81
+  },
+  "uncertainCount": {
+    "before": 0,
+    "after": 14,
+    "delta": 14
+  }
+}

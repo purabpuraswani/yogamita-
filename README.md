@@ -117,7 +117,7 @@ Angles are compared in degrees for consistency.
 ## Report Generation
 
 - Session metrics are aggregated after significant frame extraction.
-- A structured report payload is sent to backend (`POST /api/report`).
+- A structured report payload is sent to backend (`POST /api/sedentary/report`).
 - OpenRouter generates the final narrative when available.
 - Local fallback report is returned when API quota or service errors occur.
 
@@ -125,7 +125,7 @@ Angles are compared in degrees for consistency.
 
 - Live Practice page includes an Asana Chatbot panel.
 - Chatbot request includes selected asana info, user profile, and latest session summary.
-- Frontend sends context to backend `POST /api/chat`.
+- Frontend sends context to backend `POST /api/sedentary/chat`.
 - Backend uses OpenRouter when `OPENROUTER_API_KEY` is configured.
 - If key is missing or API is unavailable, a local fallback answer is returned.
 
@@ -134,28 +134,92 @@ Angles are compared in degrees for consistency.
 - Significant frames for step1, step2, and step3 are used to generate skeleton overlays.
 - Visuals correspond to stable mid-segment frames to avoid transition artifacts.
 
+## Modular Architecture
+
+YogMitra uses a **router-based modular system** to support multiple independent analysis modules.
+
+### Module System
+
+- **Shared UI Layer** (`src/app/`): Common UI, Router, and PipelineView shared across all modules.
+- **Module Router** (`src/app/Router.jsx`): Routes based on `window.__yogmitraActiveModule`.
+- **Isolated Modules** (`src/modules/`): Each module is completely self-contained with its own logic, models, and datasets.
+
+### Current Modules
+
+- **Sedentary** (`src/modules/sedentary/`): Fully implemented. Real-time yoga posture analysis for Konasana with temporal processing and scoring.
+- **Mental** (`src/modules/mental/`): Placeholder. Reserved for mental health module implementation by external team.
+
+### Module Activation
+
+Set the active module before app boot:
+
+```javascript
+window.__yogmitraActiveModule = 'sedentary';  // default
+// or
+window.__yogmitraActiveModule = 'mental';      // future
+```
+
+Router will automatically load the appropriate module. If not set, defaults to sedentary.
+
+### Module Integration for External Teams
+
+To add a new module (e.g., mental health):
+
+1. Create module directory: `src/modules/[module_name]/`
+2. Implement module entry file (e.g., `mentalApp.js`):
+   ```javascript
+   export function start[Module]App() {
+     // Initialize your module
+   }
+   export function stop[Module]App() {
+     // Cleanup
+   }
+   ```
+3. Add backend routes with `/api/[module_name]/*` prefix.
+4. Update `src/modules/index.js` to export your module.
+5. Router will automatically serve your module when `window.__yogmitraActiveModule` matches.
+
+**Critical:** Do NOT modify files outside your module directory. Shared UI is read-only.
+
 ## Folder Structure
 
 ```text
-yogamita-
+yogamita-/
   src/
+    app/                          # Shared UI layer
+      App.jsx                     # Main app entry
+      Router.jsx                  # Module router
+      LegacyBootstrap.jsx         # Sedentary module loader
+      PipelineView.jsx            # Pipeline visualization
+      main.jsx                    # React root
+    modules/                      # Isolated modules
+      sedentary/                  # Sedentary module (fully implemented)
+        sedentaryApp.js
+      mental/                     # Mental module placeholder (for external team)
+        README.md
+    assets/
   public/
     ideal_pose_data.json
+  server/
+    server.js
   scripts/
     generateDataset.js
     train.js
     extractIdealTimings.js
-  models/
+  models/                         # Sedentary module models
     step1_model/
     step2_model/
     step3_model/
-  datasets/
+  datasets/                       # Sedentary module datasets
     konasana/
-  main.js
+  main.js                         # Sedentary core logic
   prediction.js
   report.js
   dashboard.js
-  server.js
+  poseDetection.js
+  enhancedTemporalPipeline.js
+  temporalFrameProcessor.js
+  sessionScoringPipeline.js
   package.json
   package-lock.json
   README.md
@@ -181,6 +245,15 @@ OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL=openai/gpt-4o-mini
 ```
 
+## Backend Routes
+
+Currently implemented routes:
+
+- `POST /api/sedentary/report` - Generate yoga posture report
+- `POST /api/sedentary/chat` - Asana chatbot with OpenRouter integration
+
+New modules should use `/api/[module_name]/*` prefix (e.g., `/api/mental/*`).
+
 ## How to Run Project
 
 Development mode:
@@ -199,6 +272,8 @@ npm run dev
 ```
 
 Open: `http://127.0.0.1:5173`
+
+Note: if port 5173 is occupied, Vite may auto-select the next available port (for example, 5174).
 
 Production-like mode:
 
@@ -237,6 +312,25 @@ npm run extract-ideal-timings
 - MoveNet pose detection
 - Express.js
 - Sharp
+- Module Router pattern for multi-module support
+
+## For Integration Partners
+
+### Mental Health Module Team
+
+Your module should:
+
+1. Be completely isolated in `src/modules/mental/`
+2. Have its own models in `models/[mental]/` or `src/modules/mental/models/`
+3. Have its own datasets in `datasets/mental/` or `src/modules/mental/datasets/`
+4. Add backend routes with `/api/mental/*` prefix only
+5. Export `startMentalApp()` and `stopMentalApp()` functions
+6. NOT modify any files in `src/app/` or core sedentary module
+7. NOT share state with sedentary module
+
+The Router will automatically load your module when `window.__yogmitraActiveModule = 'mental'` is set.
+
+See `src/modules/mental/README.md` for detailed integration instructions.
 
 ## Future Work
 
@@ -245,6 +339,8 @@ npm run extract-ideal-timings
 - User-wise calibration and adaptive thresholds.
 - Automated dataset quality checks and augmentation controls.
 - Richer analytics dashboard and downloadable visualization bundles.
+- Mental health module integration.
+- Additional wellness modules on the modular platform.
 
 ## Author
 

@@ -1,13 +1,13 @@
 {
   "name": "yoga-dataset",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js",
-    "server": "node server.js",
+    "start": "node server/server.js",
+    "server": "node server/server.js",
     "dataset": "node scripts/generateDataset.js",
     "train": "node scripts/train.js",
     "extract-ideal-timings": "node scripts/extractIdealTimings.js",
@@ -27,7 +27,11 @@
     "sharp": "^0.34.5"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2",
     "vite": "^5.4.11"
   }
 }

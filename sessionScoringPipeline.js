@@ -186,12 +186,12 @@ function buildSessionScoresFromMajorSegments({ majorSegments, angleAnalysis, tim
 		// Get stability score from major segment
 		const stabilityScore = calculateStabilityScore(stepFrames);
 
-		// NEW WEIGHTS: Angle accuracy is now highest priority (0.45)
+		// Balanced weights for less strict scoring in sedentary/beginner use.
 		const weightedStepScore = computeNormalizedWeightedScore([
-			{ score: angleAccuracyScore, weight: 0.45 },  // Highest weight
-			{ score: stepAccuracyScore, weight: 0.35 },
-			{ score: stabilityScore, weight: 0.12 },
-			{ score: timingScore, weight: 0.08 },
+			{ score: stepAccuracyScore, weight: 0.42 },
+			{ score: angleAccuracyScore, weight: 0.33 },
+			{ score: stabilityScore, weight: 0.15 },
+			{ score: timingScore, weight: 0.10 },
 		]);
 
 		perStep[stepKey] = {
@@ -223,10 +223,10 @@ function buildSessionScoresFromMajorSegments({ majorSegments, angleAnalysis, tim
 		step3Score: Number.isFinite(perStep.step3?.weightedScore) ? perStep.step3.weightedScore : 0,
 		overallScore,
 		weights: {
-			angleAccuracy: 0.45,    // Highest weight
-			stepAccuracy: 0.35,
-			stability: 0.12,
-			timing: 0.08,
+			stepAccuracy: 0.42,
+			angleAccuracy: 0.33,
+			stability: 0.15,
+			timing: 0.10,
 		},
 		perStep,
 	};

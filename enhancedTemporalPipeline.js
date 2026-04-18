@@ -36,6 +36,7 @@ const ACTIVITY_DETECTION_CONFIG = {
 	END_IDLE_THRESHOLD: 0.01,              // Movement below this indicates idle
 	END_IDLE_FRAMES: 10,                   // Requires 10 consecutive idle frames to end
 	MIN_ACTIVITY_DURATION: 8,              // Minimum frames for valid activity (for 15-30 sec sessions)
+	PRESERVE_TAIL_FRAMES: 10,              // Always preserve last N frames to avoid losing final STEP3
 };
 
 // Step Segmentation & Stability
@@ -48,11 +49,29 @@ const SEGMENT_CONFIG = {
 
 // Frame Selection Fallback Tiers
 const FRAME_SELECTION_FALLBACKS = {
+	TIER_0: 'quality_score',               // Composite score (confidence + angle + movement)
 	TIER_1: 'stable_middle',               // Middle frame from stable segment
 	TIER_2: 'stable_first',                // First stable frame if only 1
 	TIER_3: 'lowest_movement',             // Frame with lowest movement
 	TIER_4: 'segment_middle',              // Middle frame of entire segment
 	TIER_5: 'any_frame',                   // Last resort - any frame
+};
+
+const FRAME_QUALITY_CONFIG = {
+	MIN_CONFIDENCE: 0.5,
+	CONFIDENCE_WEIGHT: 0.5,
+	ANGLE_WEIGHT: 0.3,
+	MOVEMENT_WEIGHT: 0.2,
+	BASE_TOLERANCE_DEGREES: 10,
+	STEP2_TOLERANCE_MULTIPLIER: 1.2,
+	MAX_ACCEPTABLE_ANGLE_ERROR: 35,
+	TOP_K_FRAMES: 3,
+};
+
+const ANGLE_INDEX = {
+	LEFT_SHOULDER: 2,
+	RIGHT_SHOULDER: 3,
+	SPINE: 7,
 };
 
 // Angle Analysis
@@ -122,6 +141,32 @@ function detectActivityWindowEnhanced(frameHistory) {
 		method: 'detected',
 		duration: activityDuration
 	};
+}
+
+function mergePreservedTailFrames(activeFrames, frameHistory) {
+	const preserveCount = Math.max(0, Number(ACTIVITY_DETECTION_CONFIG.PRESERVE_TAIL_FRAMES) || 0);
+	if (!Array.isArray(activeFrames) || !Array.isArray(frameHistory) || preserveCount <= 0) {
+		return Array.isArray(activeFrames) ? activeFrames : [];
+	}
+
+	const tailFrames = frameHistory.slice(-preserveCount);
+	if (!tailFrames.length) {
+		return activeFrames;
+	}
+
+	const seen = new Set();
+	const merged = [];
+	for (const frame of [...activeFrames, ...tailFrames]) {
+		const ts = Number(frame?.timestamp);
+		const key = Number.isFinite(ts) ? `ts:${ts}` : `idx:${merged.length}`;
+		if (seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		merged.push(frame);
+	}
+
+	return merged.sort((left, right) => (Number(left?.timestamp) || 0) - (Number(right?.timestamp) || 0));
 }
 
 /**
@@ -233,20 +278,65 @@ function extractStepSegments(frameHistory) {
  * Tier 4: Middle frame of entire segment
  * Tier 5: First frame as absolute fallback
  */
-function selectSignificantFrameWithFallback(stepSegment) {
+function selectSignificantFrameWithFallback(stepSegment, stepKey = null, idealPoseReference = null) {
 	if (!Array.isArray(stepSegment) || stepSegment.length === 0) {
 		return { frame: null, tier: 'none', reason: 'empty_segment' };
 	}
 
+	const scoredFrames = stepSegment
+		.map((frame) => ({ frame, ...computeRepresentativeFrameScore(frame, stepKey, idealPoseReference) }))
+		.filter((entry) => !entry.rejected && Number.isFinite(entry.score));
+
+	if (scoredFrames.length > 0) {
+		const ranked = [...scoredFrames].sort((left, right) => {
+			if (right.score !== left.score) {
+				return right.score - left.score;
+			}
+			// Optional peak detection: prefer minimum angle deviation when scores tie.
+			const leftAngle = Number.isFinite(left.angleError) ? left.angleError : Number.POSITIVE_INFINITY;
+			const rightAngle = Number.isFinite(right.angleError) ? right.angleError : Number.POSITIVE_INFINITY;
+			if (leftAngle !== rightAngle) {
+				return leftAngle - rightAngle;
+			}
+			return (Number(left.frame?.movement) || 0) - (Number(right.frame?.movement) || 0);
+		});
+
+		const topEntries = ranked.slice(0, Math.min(FRAME_QUALITY_CONFIG.TOP_K_FRAMES, ranked.length));
+		const topFrames = topEntries.map((entry) => entry.frame);
+		const averagedAngles = averageAnglesFromFrames(topFrames);
+		const representative = {
+			...topFrames[0],
+			angles: Array.isArray(averagedAngles) ? averagedAngles : topFrames[0]?.angles,
+			representativeTopFrames: topFrames,
+		};
+
+		return {
+			frame: representative,
+			topFrames,
+			topEntries,
+			averagedAngles,
+			tier: FRAME_SELECTION_FALLBACKS.TIER_0,
+			reason: `quality_score_top${topFrames.length}`,
+		};
+	}
+
 	const { STABLE_MOVEMENT_THRESHOLD, MIN_STABLE_FRAMES } = SEGMENT_CONFIG;
+	const stableThreshold = stepKey === 'step2'
+		? STABLE_MOVEMENT_THRESHOLD * 1.2
+		: stepKey === 'step3'
+			? STABLE_MOVEMENT_THRESHOLD * 2
+			: STABLE_MOVEMENT_THRESHOLD;
+	const minStableFrames = stepKey === 'step3' ? 1 : MIN_STABLE_FRAMES;
 
 	// TIER 1: Middle frame from stable frames
-	const stableFrames = stepSegment.filter(f => (Number(f?.movement) || 0) < STABLE_MOVEMENT_THRESHOLD);
+	const stableFrames = stepSegment.filter(f => (Number(f?.movement) || 0) < stableThreshold);
 	
-	if (stableFrames.length >= MIN_STABLE_FRAMES) {
+	if (stableFrames.length >= minStableFrames) {
 		const midIndex = Math.floor(stableFrames.length / 2);
 		return { 
 			frame: stableFrames[midIndex], 
+			topFrames: [stableFrames[midIndex]],
+			averagedAngles: Array.isArray(stableFrames[midIndex]?.angles) ? stableFrames[midIndex].angles : null,
 			tier: FRAME_SELECTION_FALLBACKS.TIER_1,
 			reason: `stable_middle (${stableFrames.length} stable frames)`
 		};
@@ -256,6 +346,8 @@ function selectSignificantFrameWithFallback(stepSegment) {
 	if (stableFrames.length === 1) {
 		return { 
 			frame: stableFrames[0], 
+			topFrames: [stableFrames[0]],
+			averagedAngles: Array.isArray(stableFrames[0]?.angles) ? stableFrames[0].angles : null,
 			tier: FRAME_SELECTION_FALLBACKS.TIER_2,
 			reason: 'only_one_stable_frame'
 		};
@@ -271,6 +363,8 @@ function selectSignificantFrameWithFallback(stepSegment) {
 	if (lowestMovementFrame) {
 		return { 
 			frame: lowestMovementFrame, 
+			topFrames: [lowestMovementFrame],
+			averagedAngles: Array.isArray(lowestMovementFrame?.angles) ? lowestMovementFrame.angles : null,
 			tier: FRAME_SELECTION_FALLBACKS.TIER_3,
 			reason: `lowest_movement_${(Number(lowestMovementFrame?.movement) || 0).toFixed(4)}`
 		};
@@ -282,6 +376,8 @@ function selectSignificantFrameWithFallback(stepSegment) {
 	if (stepSegment[midIndex]) {
 		return { 
 			frame: stepSegment[midIndex], 
+			topFrames: [stepSegment[midIndex]],
+			averagedAngles: Array.isArray(stepSegment[midIndex]?.angles) ? stepSegment[midIndex].angles : null,
 			tier: FRAME_SELECTION_FALLBACKS.TIER_4,
 			reason: 'segment_middle'
 		};
@@ -291,6 +387,8 @@ function selectSignificantFrameWithFallback(stepSegment) {
 	if (stepSegment[0]) {
 		return { 
 			frame: stepSegment[0], 
+			topFrames: [stepSegment[0]],
+			averagedAngles: Array.isArray(stepSegment[0]?.angles) ? stepSegment[0].angles : null,
 			tier: FRAME_SELECTION_FALLBACKS.TIER_5,
 			reason: 'absolute_fallback'
 		};
@@ -309,13 +407,150 @@ function hasUsablePoseData(frame) {
 	return validAngles >= 3;
 }
 
-function pickBestFrameFromPool(framePool) {
+function getCalibratedFrameConfidence(frame) {
+	const rawConfidence = Math.min(1, Math.max(0, Number(frame?.confidence) || 0));
+	const stabilityScore = Math.min(1, Math.max(0, Number(frame?.stabilityScore) || 0));
+	return Math.min(1, Math.max(0, rawConfidence * (0.55 + (0.45 * stabilityScore))));
+}
+
+function toFiniteNumber(value) {
+	const numeric = Number(value);
+	return Number.isFinite(numeric) ? numeric : null;
+}
+
+function computeAngleDifference(userAngle, idealAngle) {
+	const user = toFiniteNumber(userAngle);
+	const ideal = toFiniteNumber(idealAngle);
+	if (user === null || ideal === null) {
+		return null;
+	}
+
+	let diff = Math.abs(user - ideal);
+	if (diff > 180) {
+		diff = 360 - diff;
+	}
+	return diff;
+}
+
+function computeFrameAngleError(frame, stepKey, idealPoseReference) {
+	const frameAngles = Array.isArray(frame?.angles) ? frame.angles : null;
+	const idealAngles = Array.isArray(idealPoseReference?.[stepKey]?.idealAngles) ? idealPoseReference[stepKey].idealAngles : null;
+	if (!frameAngles || !idealAngles || !frameAngles.length || !idealAngles.length) {
+		return null;
+	}
+
+	const jointCount = Math.min(frameAngles.length, idealAngles.length);
+	if (jointCount < 3) {
+		return null;
+	}
+
+	const tolerance = FRAME_QUALITY_CONFIG.BASE_TOLERANCE_DEGREES * (stepKey === 'step2' ? FRAME_QUALITY_CONFIG.STEP2_TOLERANCE_MULTIPLIER : 1);
+	const maxAllowedError = FRAME_QUALITY_CONFIG.MAX_ACCEPTABLE_ANGLE_ERROR * (stepKey === 'step2' ? FRAME_QUALITY_CONFIG.STEP2_TOLERANCE_MULTIPLIER : 1);
+
+	let weightedErrorSum = 0;
+	let weightSum = 0;
+
+	for (let i = 0; i < jointCount; i += 1) {
+		const rawDiff = computeAngleDifference(frameAngles[i], idealAngles[i]);
+		if (!Number.isFinite(rawDiff)) {
+			continue;
+		}
+
+		let jointWeight = 1;
+		if (stepKey === 'step2' && (i === ANGLE_INDEX.LEFT_SHOULDER || i === ANGLE_INDEX.RIGHT_SHOULDER || i === ANGLE_INDEX.SPINE)) {
+			jointWeight = 1.5;
+		}
+
+		const adjustedDiff = Math.max(0, rawDiff - tolerance);
+		weightedErrorSum += adjustedDiff * jointWeight;
+		weightSum += jointWeight;
+	}
+
+	if (weightSum <= 0) {
+		return null;
+	}
+
+	const weightedAngleError = weightedErrorSum / weightSum;
+	return {
+		weightedAngleError,
+		maxAllowedError,
+	};
+}
+
+function computeRepresentativeFrameScore(frame, stepKey, idealPoseReference) {
+	const confidence = Math.min(1, Math.max(0, Number(frame?.confidence) || 0));
+	const minConfidence = stepKey === 'step3'
+		? Math.max(0.35, FRAME_QUALITY_CONFIG.MIN_CONFIDENCE - 0.12)
+		: FRAME_QUALITY_CONFIG.MIN_CONFIDENCE;
+	if (confidence < minConfidence) {
+		return { score: Number.NEGATIVE_INFINITY, rejected: true, reason: 'low_confidence', angleError: null };
+	}
+
+	const movement = Math.max(0, Number(frame?.movement) || 0);
+	const angleMeta = computeFrameAngleError(frame, stepKey, idealPoseReference);
+	if (!angleMeta || !Number.isFinite(angleMeta.weightedAngleError)) {
+		return { score: Number.NEGATIVE_INFINITY, rejected: true, reason: 'angle_unavailable', angleError: null };
+	}
+
+	const maxAllowedError = stepKey === 'step3' ? angleMeta.maxAllowedError * 1.2 : angleMeta.maxAllowedError;
+	if (angleMeta.weightedAngleError > maxAllowedError) {
+		return { score: Number.NEGATIVE_INFINITY, rejected: true, reason: 'high_angle_error', angleError: angleMeta.weightedAngleError };
+	}
+
+	const score =
+		(confidence * FRAME_QUALITY_CONFIG.CONFIDENCE_WEIGHT) +
+		((1 / (angleMeta.weightedAngleError + 1)) * FRAME_QUALITY_CONFIG.ANGLE_WEIGHT) +
+		((1 / (movement + 1)) * FRAME_QUALITY_CONFIG.MOVEMENT_WEIGHT);
+
+	return {
+		score,
+		rejected: false,
+		reason: 'ok',
+		angleError: angleMeta.weightedAngleError,
+	};
+}
+
+function averageAnglesFromFrames(frames) {
+	if (!Array.isArray(frames) || !frames.length) {
+		return null;
+	}
+
+	const maxLength = Math.max(...frames.map((frame) => (Array.isArray(frame?.angles) ? frame.angles.length : 0)));
+	if (!Number.isFinite(maxLength) || maxLength <= 0) {
+		return null;
+	}
+
+	const averaged = [];
+	for (let i = 0; i < maxLength; i += 1) {
+		const values = frames
+			.map((frame) => toFiniteNumber(frame?.angles?.[i]))
+			.filter((value) => value !== null);
+		if (!values.length) {
+			averaged.push(null);
+			continue;
+		}
+		averaged.push(values.reduce((sum, value) => sum + value, 0) / values.length);
+	}
+
+	return averaged;
+}
+
+function pickBestFrameFromPool(framePool, stepKey = null, idealPoseReference = null) {
 	if (!Array.isArray(framePool) || framePool.length === 0) {
 		return null;
 	}
 
 	const usableFrames = framePool.filter(hasUsablePoseData);
 	const source = usableFrames.length > 0 ? usableFrames : framePool;
+
+	const scored = source
+		.map((frame) => ({ frame, ...computeRepresentativeFrameScore(frame, stepKey, idealPoseReference) }))
+		.filter((entry) => !entry.rejected && Number.isFinite(entry.score))
+		.sort((left, right) => right.score - left.score);
+
+	if (scored.length) {
+		return scored[0].frame;
+	}
 
 	return source.reduce((best, current) => {
 		if (!best) {
@@ -329,10 +564,10 @@ function pickBestFrameFromPool(framePool) {
 	}, null);
 }
 
-function findStepFallbackFrame(stepKey, candidatePools) {
+function findStepFallbackFrame(stepKey, candidatePools, idealPoseReference = null) {
 	for (const pool of candidatePools) {
 		const stepFrames = (Array.isArray(pool) ? pool : []).filter((frame) => frame?.step === stepKey);
-		const best = pickBestFrameFromPool(stepFrames);
+		const best = pickBestFrameFromPool(stepFrames, stepKey, idealPoseReference);
 		if (best) {
 			return best;
 		}
@@ -340,51 +575,126 @@ function findStepFallbackFrame(stepKey, candidatePools) {
 	return null;
 }
 
+function synthesizeStep3FromTail(activeFrames, existingSegments, idealPoseReference = null) {
+	if (!Array.isArray(activeFrames) || !activeFrames.length) {
+		return [];
+	}
+	if (Array.isArray(existingSegments?.step3) && existingSegments.step3.length) {
+		return existingSegments.step3;
+	}
+
+	const tailCount = Math.max(3, Number(ACTIVITY_DETECTION_CONFIG.PRESERVE_TAIL_FRAMES) || 10);
+	const tail = activeFrames.slice(-tailCount);
+	const candidates = tail.filter((frame) => {
+		const movement = Number(frame?.movement) || 0;
+		const hasAngles = Array.isArray(frame?.angles) && frame.angles.some((value) => Number.isFinite(Number(value)));
+		return hasAngles && movement <= (SEGMENT_CONFIG.STABLE_MOVEMENT_THRESHOLD * 2.8);
+	});
+
+	if (!candidates.length) {
+		return [];
+	}
+
+	const scored = candidates
+		.map((frame) => ({ frame, ...computeRepresentativeFrameScore({ ...frame, step: 'step3' }, 'step3', idealPoseReference) }))
+		.filter((entry) => !entry.rejected && Number.isFinite(entry.score))
+		.sort((left, right) => right.score - left.score);
+
+	const source = scored.length ? scored.map((entry) => entry.frame) : candidates;
+	const picked = source.slice(0, Math.max(3, Math.min(source.length, 6)));
+	return picked.map((frame) => ({ ...frame, step: 'step3', smoothedStep: 'step3' }));
+}
+
 /**
  * STAGE 5: MAIN PIPELINE
  * 
  * Coordinates all processing and returns consistent frame selections
  */
-function runEnhancedTemporalPipeline(frameHistory) {
+function runEnhancedTemporalPipeline(frameHistory, idealPoseReference = null) {
 	console.log('=== ENHANCED TEMPORAL PIPELINE START ===');
 	console.log(`Input: ${frameHistory.length} frames`);
+
+	const toFrameSummary = (entry, index) => {
+		const frame = entry?.frame || null;
+		return {
+			rank: index + 1,
+			step: frame?.step || null,
+			timestamp: Number(frame?.timestamp) || null,
+			movement: Number.isFinite(Number(frame?.movement)) ? Number(Number(frame.movement).toFixed(4)) : null,
+			confidence: Number.isFinite(Number(frame?.confidence)) ? Number(Number(frame.confidence).toFixed(3)) : null,
+			qualityScore: Number.isFinite(Number(entry?.score)) ? Number(Number(entry.score).toFixed(4)) : null,
+			angleError: Number.isFinite(Number(entry?.angleError)) ? Number(Number(entry.angleError).toFixed(2)) : null,
+		};
+	};
+
+	const logSelectionDiagnostics = (stepKey, selection) => {
+		const topEntries = Array.isArray(selection?.topEntries) ? selection.topEntries : [];
+		if (topEntries.length > 0) {
+			console.log(`[REP FRAME TOP3] ${stepKey}`, topEntries.slice(0, 3).map((entry, index) => toFrameSummary(entry, index)));
+		}
+		if (selection?.frame?.step && selection.frame.step !== stepKey) {
+			console.warn(`[REP FRAME MISMATCH] expected=${stepKey} selected=${selection.frame.step} tier=${selection.tier} reason=${selection.reason}`);
+		}
+	};
 
 	// STAGE 1: Activity Detection
 	const activityWindow = detectActivityWindowEnhanced(frameHistory);
 	console.log(`Activity Window: frames ${activityWindow.startIndex}-${activityWindow.endIndex} (${activityWindow.endIndex - activityWindow.startIndex + 1} frames, method: ${activityWindow.method})`);
 	
-	const activeFrames = frameHistory.slice(activityWindow.startIndex, activityWindow.endIndex + 1);
+	const detectedActiveFrames = frameHistory.slice(activityWindow.startIndex, activityWindow.endIndex + 1);
+	const activeFrames = mergePreservedTailFrames(detectedActiveFrames, frameHistory);
+	if (activeFrames.length !== detectedActiveFrames.length) {
+		console.log(`Tail preserve: ${detectedActiveFrames.length} -> ${activeFrames.length} frames (kept last ${ACTIVITY_DETECTION_CONFIG.PRESERVE_TAIL_FRAMES})`);
+	}
 
 	// STAGE 2: State Machine Filtering
 	const { frames: validSequenceFrames, transitionIndices } = filterWithStateMachine(activeFrames);
 	console.log(`Valid Sequence: ${validSequenceFrames.length} frames (${transitionIndices.step3End >= 0 ? 'all 3 steps' : 'incomplete sequence'})`);
+	console.log('[STEP SEGMENT DEBUG] Active frame labels:', activeFrames.map((frame, index) => ({
+		idx: index,
+		step: frame?.step || null,
+		confidence: Number.isFinite(Number(frame?.confidence)) ? Number(Number(frame.confidence).toFixed(3)) : null,
+		movement: Number.isFinite(Number(frame?.movement)) ? Number(Number(frame.movement).toFixed(4)) : null,
+	})).slice(-Math.min(30, activeFrames.length)));
 
 	// STAGE 3: Step Segmentation
 	const segments = extractStepSegments(validSequenceFrames);
+	if (!segments.step3.length) {
+		const recoveredStep3 = synthesizeStep3FromTail(activeFrames, segments, idealPoseReference);
+		if (recoveredStep3.length) {
+			segments.step3 = recoveredStep3;
+			console.warn(`[STEP3 FALLBACK] Recovered ${recoveredStep3.length} STEP3 tail frames from session end.`);
+		}
+	}
 	console.log(`Segments: step1=${segments.step1.length}, step2=${segments.step2.length}, step3=${segments.step3.length}`);
+ 	console.log('[STEP COUNTS]', {
+		step1: segments.step1.length,
+		step2: segments.step2.length,
+		step3: segments.step3.length,
+	});
 
 	// STAGE 4: Significant Frame Selection with Fallback
-	const step1Selection = selectSignificantFrameWithFallback(segments.step1);
-	const step2Selection = selectSignificantFrameWithFallback(segments.step2);
-	const step3Selection = selectSignificantFrameWithFallback(segments.step3);
+	const step1Selection = selectSignificantFrameWithFallback(segments.step1, 'step1', idealPoseReference);
+	const step2Selection = selectSignificantFrameWithFallback(segments.step2, 'step2', idealPoseReference);
+	const step3Selection = selectSignificantFrameWithFallback(segments.step3, 'step3', idealPoseReference);
 
 	const fallbackPools = [validSequenceFrames, activeFrames, frameHistory];
 	if (!step1Selection.frame) {
-		step1Selection.frame = findStepFallbackFrame('step1', fallbackPools);
+		step1Selection.frame = findStepFallbackFrame('step1', fallbackPools, idealPoseReference);
 		if (step1Selection.frame) {
 			step1Selection.tier = 'cross_pool_fallback';
 			step1Selection.reason = 'used broader pool for step1';
 		}
 	}
 	if (!step2Selection.frame) {
-		step2Selection.frame = findStepFallbackFrame('step2', fallbackPools);
+		step2Selection.frame = findStepFallbackFrame('step2', fallbackPools, idealPoseReference);
 		if (step2Selection.frame) {
 			step2Selection.tier = 'cross_pool_fallback';
 			step2Selection.reason = 'used broader pool for step2';
 		}
 	}
 	if (!step3Selection.frame) {
-		step3Selection.frame = findStepFallbackFrame('step3', fallbackPools);
+		step3Selection.frame = findStepFallbackFrame('step3', fallbackPools, idealPoseReference);
 		if (step3Selection.frame) {
 			step3Selection.tier = 'cross_pool_fallback';
 			step3Selection.reason = 'used broader pool for step3';
@@ -405,6 +715,9 @@ function runEnhancedTemporalPipeline(frameHistory) {
 	console.log(`  step1: tier=${step1Selection.tier}, reason=${step1Selection.reason}`);
 	console.log(`  step2: tier=${step2Selection.tier}, reason=${step2Selection.reason}`);
 	console.log(`  step3: tier=${step3Selection.tier}, reason=${step3Selection.reason}`);
+	logSelectionDiagnostics('step1', step1Selection);
+	logSelectionDiagnostics('step2', step2Selection);
+	logSelectionDiagnostics('step3', step3Selection);
 
 	// STAGE 5: Create consistent output object
 	const result = {
@@ -458,15 +771,20 @@ function buildTimingAnalysisFromSelectedFrames(selectedFrames, sessionStartTime,
 	const step3Ts = getFrameTimestamp(selectedFrames?.step3);
 	
 	const fallbackReference = Number(sessionStartTime);
+	const earliestSelectedTs = [step1Ts, step2Ts, step3Ts]
+		.filter((value) => Number.isFinite(value))
+		.sort((left, right) => left - right)[0] ?? null;
 	const referenceTs = Number.isFinite(step1Ts)
 		? step1Ts
+		: Number.isFinite(earliestSelectedTs)
+			? earliestSelectedTs
 		: Number.isFinite(fallbackReference)
 			? fallbackReference
 			: null;
 	
-	const toSeconds = (ts) => Number.isFinite(ts) && Number.isFinite(referenceTs) 
-		? (ts - referenceTs) / 1000 
-		: 0;
+	const toSeconds = (ts) => Number.isFinite(ts) && Number.isFinite(referenceTs)
+		? Math.max(0, (ts - referenceTs) / 1000)
+		: null;
 
 	const userStep1Time = toSeconds(step1Ts);
 	const userStep2Time = toSeconds(step2Ts);
@@ -536,23 +854,35 @@ function calculateStepAccuracyScore(stepFrames) {
 		return 0;
 	}
 
-	const total = stepFrames.length;
-	const correct = stepFrames.filter((frame) => frame?.label === 'correct').length;
-	const moderate = stepFrames.filter((frame) => frame?.label === 'moderate').length;
-	const incorrect = stepFrames.filter((frame) => frame?.label === 'incorrect').length;
+	const weighted = stepFrames.map((frame) => {
+		const confidence = getCalibratedFrameConfidence(frame);
+		const stepBoost = frame?.step === 'step2' ? 1.05 : 1;
+		return {
+			label: frame?.label,
+			weight: Math.max(0.1, confidence * stepBoost),
+		};
+	});
 
-	const normalized = (correct * 1 + moderate * 0.6 + incorrect * 0.2) / total;
+	const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+	const correct = weighted.filter((item) => item.label === 'correct').reduce((sum, item) => sum + item.weight, 0);
+	const moderate = weighted.filter((item) => item.label === 'moderate').reduce((sum, item) => sum + item.weight, 0);
+	const incorrect = weighted.filter((item) => item.label === 'incorrect').reduce((sum, item) => sum + item.weight, 0);
+
+	// Lenient mapping for beginners/sedentary users: treat moderate as near-correct and
+	// avoid collapsing score when many early frames are marked incorrect.
+	const normalized = (correct * 1 + moderate * 0.75 + incorrect * 0.4) / total;
 	return clampScore(normalized * 100);
 }
 
 function calculateAngleAccuracyScore(stepAngleInfo) {
-	const averageError = Number(stepAngleInfo?.averageError);
+	const averageError = Number(stepAngleInfo?.weightedAverageError ?? stepAngleInfo?.averageError ?? stepAngleInfo?.rawAverageError);
 	if (!Number.isFinite(averageError)) {
 		return 0;
 	}
 
-	// 0 degree error -> 100 score, 30+ degree error -> 0 score.
-	return clampScore((1 - Math.min(averageError, 30) / 30) * 100);
+	// Make angle penalty less steep: 0 error => 100, 45+ degrees => 0.
+	const cappedPenalty = Math.min(Math.max(0, averageError), 45);
+	return clampScore(100 - ((cappedPenalty / 45) * 100));
 }
 
 function calculateTimingScoreForStep(delaySeconds) {
@@ -562,8 +892,8 @@ function calculateTimingScoreForStep(delaySeconds) {
 	}
 
 	const absDelay = Math.abs(delay);
-	// 0s delay -> 100 score, 10s or more -> 0 score.
-	return clampScore((1 - Math.min(absDelay, 10) / 10) * 100);
+	// 0s delay -> 100 score, 14s or more -> 0 score (more tolerant pacing).
+	return clampScore((1 - Math.min(absDelay, 14) / 14) * 100);
 }
 
 function calculateStabilityScore(stepFrames) {
@@ -571,17 +901,29 @@ function calculateStabilityScore(stepFrames) {
 		return null;
 	}
 
-	const movements = stepFrames
-		.map((frame) => Number(frame?.movement))
-		.filter((value) => Number.isFinite(value));
+	const movements = [...stepFrames]
+		.filter((frame) => Number.isFinite(Number(frame?.movement)))
+		.sort((left, right) => {
+			const movementDiff = (Number(left?.movement) || 0) - (Number(right?.movement) || 0);
+			if (movementDiff !== 0) {
+				return movementDiff;
+			}
+			return getCalibratedFrameConfidence(right) - getCalibratedFrameConfidence(left);
+		})
+		.slice(0, Math.min(3, stepFrames.length));
 
 	if (!movements.length) {
 		return null;
 	}
 
-	const averageMovement = movements.reduce((sum, value) => sum + value, 0) / movements.length;
-	// 0 movement -> 100 score, 0.12+ movement -> 0 score.
-	return clampScore((1 - Math.min(averageMovement, 0.12) / 0.12) * 100);
+	const weightedMovements = movements.map((frame) => ({
+		movement: Number(frame?.movement) || 0,
+		weight: Math.max(0.1, getCalibratedFrameConfidence(frame)),
+	}));
+	const weightTotal = weightedMovements.reduce((sum, item) => sum + item.weight, 0);
+	const averageMovement = weightedMovements.reduce((sum, item) => sum + (item.movement * item.weight), 0) / weightTotal;
+	// 0 movement -> 100 score, 0.24+ movement -> 0 score (less strict).
+	return clampScore(100 - ((Math.min(averageMovement, 0.24) / 0.24) * 100));
 }
 
 function computeNormalizedWeightedScore(parts) {

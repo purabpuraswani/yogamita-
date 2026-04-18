@@ -8,13 +8,17 @@ export default function LegacyBootstrap() {
 
 		window.__yogmitraBootstrapped = true;
 
-		import('../main.js').catch((error) => {
-			const statusEl = document.getElementById('statusText');
-			if (statusEl) {
-				statusEl.textContent = `App initialization failed: ${error.message}`;
-			}
-			console.error('YogMitra bootstrap failed', error);
-		});
+		import('./modules/sedentary/sedentaryApp.js')
+			.then(({ startSedentaryApp }) => {
+				startSedentaryApp();
+			})
+			.catch((error) => {
+				const statusEl = document.getElementById('statusText');
+				if (statusEl) {
+					statusEl.textContent = `App initialization failed: ${error.message}`;
+				}
+				console.error('YogMitra bootstrap failed', error);
+			});
 	}, []);
 
 	return null;

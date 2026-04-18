@@ -53,6 +53,7 @@ const rawVideoEl = document.getElementById('rawVideo');
 const markedVideoEl = document.getElementById('markedVideo');
 const canvasEl = document.getElementById('poseCanvas');
 const downloadReportBtn = document.getElementById('downloadReportBtn');
+const viewPipelineBtn = document.getElementById('viewPipelineBtn');
 const chatbotMessagesEl = document.getElementById('chatbotMessages');
 const chatbotFormEl = document.getElementById('chatbotForm');
 const chatbotInputEl = document.getElementById('chatbotInput');
@@ -81,6 +82,7 @@ let busyPredicting = false;
 let lastPredictionAt = 0;
 let sessionActive = false;
 let reportGenerationInProgress = false;
+let appInitialized = false;
 const STABLE_CAPTURE_FRAMES = 5;
 const STABLE_CAPTURE_MIN_CONFIDENCE = 0.55;
 
@@ -106,7 +108,8 @@ const STEP_STATE = {
 	STEP3: 'STEP3',
 	FINISHED: 'FINISHED',
 };
-const SESSION_HISTORY_KEY_PREFIX = 'yogmitra_session_history';
+const SESSION_HISTORY_KEY_PREFIX = 'sedentary_session_history';
+const PIPELINE_VIEW_STORAGE_KEY = 'sedentary_pipeline_view_data';
 const SESSION_HISTORY_MAX = 100;
 const JOINT_ANGLE_ORDER = [
 	'left_elbow',
@@ -131,6 +134,84 @@ function setDownloadReportState(enabled) {
 	}
 
 	downloadReportBtn.disabled = !enabled;
+}
+
+function persistPipelineViewData(sessionReport) {
+	if (!sessionReport || typeof window === 'undefined') {
+		return;
+	}
+
+	const skeletonImages = sessionReport?.finalReport?.skeletonImages || {};
+	const selectedFrames = sessionReport?.selectedFrames || {};
+	const majorSegments = sessionReport?.majorSegments || {};
+	const pipelineMetadata = sessionReport?.pipelineMetadata || {};
+
+	const buildSelectedFrameInfo = (stepKey) => {
+		const frame = selectedFrames?.[stepKey] || null;
+		if (!frame) {
+			return null;
+		}
+
+		return {
+			step: frame.step || stepKey,
+			label: frame.label || null,
+			timestamp: Number.isFinite(Number(frame.timestamp)) ? Number(frame.timestamp) : null,
+			confidence: Number.isFinite(Number(frame.confidence)) ? Number(frame.confidence) * 100 : null,
+			movement: Number.isFinite(Number(frame.movement)) ? Number(frame.movement) : null,
+			stabilityScore: Number.isFinite(Number(frame.stabilityScore)) ? Number(frame.stabilityScore) : null,
+			keypointConfidence: Number.isFinite(Number(frame.keypointConfidence)) ? Number(frame.keypointConfidence) * 100 : null,
+		};
+	};
+
+	const payload = {
+		savedAt: new Date().toISOString(),
+		asanaName: sessionReport?.asanaName || appState.asana,
+		sessionDate: sessionReport?.finalReport?.reportHeader?.sessionDate || null,
+		sessionStats: {
+			totalCapturedFrames: Number.isFinite(Number(sessionReport?.totalCapturedFrames)) ? Number(sessionReport.totalCapturedFrames) : null,
+			validSequenceFrames: Number.isFinite(Number(sessionReport?.pipelineMetadata?.validSequenceFrameCount))
+				? Number(sessionReport.pipelineMetadata.validSequenceFrameCount)
+				: null,
+			totalAnalyzedFrames: Number.isFinite(Number(sessionReport?.totalFrames)) ? Number(sessionReport.totalFrames) : null,
+			skippedFrameCount: Number.isFinite(Number(sessionReport?.skippedFrameCount)) ? Number(sessionReport.skippedFrameCount) : null,
+		},
+		activityWindow: pipelineMetadata?.activityWindow || null,
+		frameSelectionTiers: pipelineMetadata?.frameSelectionTiers || null,
+		majorSegmentCounts: {
+			step1: Array.isArray(majorSegments?.step1) ? majorSegments.step1.length : 0,
+			step2: Array.isArray(majorSegments?.step2) ? majorSegments.step2.length : 0,
+			step3: Array.isArray(majorSegments?.step3) ? majorSegments.step3.length : 0,
+		},
+		selectedFrames: {
+			step1: buildSelectedFrameInfo('step1'),
+			step2: buildSelectedFrameInfo('step2'),
+			step3: buildSelectedFrameInfo('step3'),
+		},
+		images: {
+			step1: skeletonImages?.step1?.dataUrl || null,
+			step2: skeletonImages?.step2?.dataUrl || null,
+			step3: skeletonImages?.step3?.dataUrl || null,
+		},
+		angleAnalysis: sessionReport?.angleAnalysis || null,
+		timing: sessionReport?.timingAnalysis || null,
+		scores: sessionReport?.sessionScores || null,
+	};
+
+	try {
+		localStorage.setItem(PIPELINE_VIEW_STORAGE_KEY, JSON.stringify(payload));
+	} catch (_error) {
+		// Ignore storage write failures to avoid interrupting app flow.
+	}
+}
+
+function openPipelineViewPage() {
+	if (appState.sessionReport) {
+		persistPipelineViewData(appState.sessionReport);
+	}
+
+	if (typeof window !== 'undefined') {
+		window.location.href = '/pipeline';
+	}
 }
 
 function buildReportFileName() {
@@ -634,7 +715,7 @@ async function handleChatbotSubmit(event) {
 	}
 
 	try {
-		const response = await fetch('/api/chat', {
+		const response = await fetch('/api/sedentary/chat', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -3037,6 +3118,7 @@ async function finalizeSessionAnalysis() {
 			validSequenceFrameCount: enhancedPipeline.validSequenceFrameCount,
 		},
 	};
+	persistPipelineViewData(appState.sessionReport);
 
 	console.log('=== ENHANCED ANALYSIS COMPLETE ===');
 	return { 
@@ -3443,7 +3525,10 @@ async function handleGenerateReport() {
 		? ((source.totalCapturedFrames - source.skippedFrameCount) / source.totalCapturedFrames) * 100
 		: 0;
 	const latestUserFeedback = source.userFeedback || null;
+	const profile = appState.userProfile || {};
 	const sessionFeedback = [
+		`Profile context: age=${profile.age ?? 'N/A'}, height=${profile.heightCm ?? 'N/A'}cm, weight=${profile.weightKg ?? 'N/A'}kg, flexibility=${profile.flexibility ?? 'N/A'}, experience=${profile.experience ?? 'N/A'}`,
+		`Lifestyle context: activityLevel=${profile.activityLevel ?? 'N/A'}, eatingHabits=${profile.eatingHabits ?? 'N/A'}, sleepHours=${Number.isFinite(Number(profile.sleepHours)) ? Number(profile.sleepHours).toFixed(1) : 'N/A'}, healthNotes=${profile.healthNotes || 'none'}`,
 		`Session duration: ${source.sessionDuration}`,
 		`Pose checks completed: ${source.totalFrames}`,
 		`Step1 timing: ${Number.isFinite(timing.userStep1Time) ? `${timing.userStep1Time.toFixed(2)}s` : 'N/A'} (ideal: ${Number.isFinite(timing.idealStep1Time) ? `${timing.idealStep1Time.toFixed(2)}s` : 'N/A'})`,
@@ -3474,9 +3559,15 @@ async function handleGenerateReport() {
 		asana: source.asanaName,
 		prediction: source.finalResult.toLowerCase(),
 		score: source.averageScore,
-		age: appState.userProfile.age,
-		flexibility: appState.userProfile.flexibility,
-		experience: appState.userProfile.experience,
+		age: profile.age,
+		heightCm: profile.heightCm,
+		weightKg: profile.weightKg,
+		flexibility: profile.flexibility,
+		experience: profile.experience,
+		activityLevel: profile.activityLevel,
+		eatingHabits: profile.eatingHabits,
+		sleepHours: profile.sleepHours,
+		healthNotes: profile.healthNotes,
 		session: {
 			duration: source.sessionDuration,
 			totalCapturedFrames: source.totalCapturedFrames,
@@ -3530,79 +3621,104 @@ async function handleGenerateReport() {
 	}
 }
 
-initDashboard({
-	onAsanaChanged: (asanaName) => {
-		appState.asana = asanaName;
-	},
-	onStartSession: async () => {
-		await startSession();
-	},
-	onEndSession: () => {
-		endSession();
-	},
-	onGenerateReport: () => {
-		handleGenerateReport();
-	},
-	onLogout: () => {
-		logoutUser();
-	},
-});
+export function initApp() {
+	if (appInitialized || (typeof window !== 'undefined' && window.__sedentaryAppInitialized)) {
+		return;
+	}
 
-initLogin({
-	onLoginSuccess: ({ email, fullName }) => {
-		appState.user = { email, fullName: fullName || '' };
-		setWelcomeText(appState.user);
-		renderStatus('Logged in successfully.');
-	},
-	onProfileSubmit: async (profile) => {
-		appState.userProfile = profile;
-		renderStatus('Profile saved. Click Start Session to begin webcam analysis.');
-		try {
-			await predictor.load();
-		} catch (error) {
-			renderStatus(`Model load failed: ${error.message}`);
-		}
-	},
-});
+	appInitialized = true;
+	if (typeof window !== 'undefined') {
+		window.__sedentaryAppInitialized = true;
+	}
 
-if (downloadReportBtn) {
-	downloadReportBtn.addEventListener('click', downloadReportAsText);
-}
-
-if (chatbotFormEl) {
-	chatbotFormEl.addEventListener('submit', handleChatbotSubmit);
-}
-
-if (reportAssistantToggleBtnEl) {
-	reportAssistantToggleBtnEl.addEventListener('click', () => {
-		const isHidden = reportAssistantPanelEl?.classList.contains('hidden');
-		setReportAssistantOpen(Boolean(isHidden));
+	initDashboard({
+		onAsanaChanged: (asanaName) => {
+			appState.asana = asanaName;
+		},
+		onStartSession: async () => {
+			await startSession();
+		},
+		onEndSession: () => {
+			endSession();
+		},
+		onGenerateReport: () => {
+			handleGenerateReport();
+		},
+		onLogout: () => {
+			logoutUser();
+		},
 	});
-}
 
-if (reportAssistantCloseBtnEl) {
-	reportAssistantCloseBtnEl.addEventListener('click', () => {
-		setReportAssistantOpen(false);
+	initLogin({
+		onLoginSuccess: ({ email, fullName }) => {
+			appState.user = { email, fullName: fullName || '' };
+			setWelcomeText(appState.user);
+			renderStatus('Logged in successfully.');
+		},
+		onProfileSubmit: async (profile) => {
+			appState.userProfile = profile;
+			renderStatus('Profile saved. Click Start Session to begin webcam analysis.');
+			try {
+				await predictor.load();
+			} catch (error) {
+				renderStatus(`Model load failed: ${error.message}`);
+			}
+		},
 	});
+
+	if (downloadReportBtn) {
+		downloadReportBtn.addEventListener('click', downloadReportAsText);
+	}
+
+	if (viewPipelineBtn) {
+		viewPipelineBtn.addEventListener('click', openPipelineViewPage);
+	}
+
+	if (chatbotFormEl) {
+		chatbotFormEl.addEventListener('submit', handleChatbotSubmit);
+	}
+
+	if (reportAssistantToggleBtnEl) {
+		reportAssistantToggleBtnEl.addEventListener('click', () => {
+			const isHidden = reportAssistantPanelEl?.classList.contains('hidden');
+			setReportAssistantOpen(Boolean(isHidden));
+		});
+	}
+
+	if (reportAssistantCloseBtnEl) {
+		reportAssistantCloseBtnEl.addEventListener('click', () => {
+			setReportAssistantOpen(false);
+		});
+	}
+
+	if (feedbackDiscomfortEl) {
+		feedbackDiscomfortEl.addEventListener('change', (event) => {
+			setFeedbackPainAreaVisibility(String(event?.target?.value || 'none'));
+		});
+	}
+
+	if (sessionFeedbackFormEl) {
+		sessionFeedbackFormEl.addEventListener('submit', handleSessionFeedbackSubmit);
+	}
+
+	if (feedbackSkipBtnEl) {
+		feedbackSkipBtnEl.addEventListener('click', handleSessionFeedbackSkip);
+	}
+
+	setDownloadReportState(false);
+	setReportAssistantAvailable(false);
+
+	if (typeof window !== 'undefined') {
+		window.addEventListener('beforeunload', () => {
+			stopRealtimePipeline();
+		});
+	}
 }
 
-if (feedbackDiscomfortEl) {
-	feedbackDiscomfortEl.addEventListener('change', (event) => {
-		setFeedbackPainAreaVisibility(String(event?.target?.value || 'none'));
-	});
-}
-
-if (sessionFeedbackFormEl) {
-	sessionFeedbackFormEl.addEventListener('submit', handleSessionFeedbackSubmit);
-}
-
-if (feedbackSkipBtnEl) {
-	feedbackSkipBtnEl.addEventListener('click', handleSessionFeedbackSkip);
-}
-
-setDownloadReportState(false);
-setReportAssistantAvailable(false);
-
-window.addEventListener('beforeunload', () => {
+export function stopApp() {
+	setSessionActive(false);
 	stopRealtimePipeline();
-});
+	setSessionControlState(false);
+}
+
+initApp();

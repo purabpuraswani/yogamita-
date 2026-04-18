@@ -32,9 +32,9 @@ const FALLBACK_ASANA_CATALOG = [
 			},
 		],
 		photoLinks: [
-			'src/konasana step 1.png',
-			'src/konasana step 2.png',
-			'src/konasana step 3.png',
+			'src/assets/konasana step 1.png',
+			'src/assets/konasana step 2.png',
+			'src/assets/konasana step 3.png',
 		],
 			videoLinks: ['/poses/konasana-video.mp4'],
 		tutorialCaption: 'Follow this guided Konasana demo video.',
@@ -418,6 +418,7 @@ function renderStructuredReportText(text, outputEl) {
 
 	const lines = String(text || '').split('\n');
 	let listEl = null;
+	const isLifestyleHighlightLine = (input) => /\b(sedentary|lifestyle support add-on|lifestyle support)\b/i.test(String(input || ''));
 
 	const parseInlineMarkdown = (input) => {
 		const fragment = document.createDocumentFragment();
@@ -573,7 +574,11 @@ function renderStructuredReportText(text, outputEl) {
 				outputEl.appendChild(listEl);
 			}
 			const item = document.createElement('li');
-			item.appendChild(parseInlineMarkdown(cleanLine.slice(2)));
+			const itemText = cleanLine.slice(2);
+			if (isLifestyleHighlightLine(itemText)) {
+				item.classList.add('report-list-highlight');
+			}
+			item.appendChild(parseInlineMarkdown(itemText));
 			listEl.appendChild(item);
 			continue;
 		}

@@ -198,6 +198,13 @@ button:hover {
 	place-items: center;
 	padding: 16px;
 	z-index: 5;
+	overflow-y: auto;
+}
+
+.modal-card {
+	max-height: calc(100vh - 32px);
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .feedback-modal-card {
@@ -1125,6 +1132,30 @@ button:hover {
 	font-size: 0.89rem;
 }
 
+.report-list-highlight {
+	list-style: none;
+	margin-left: -18px;
+	padding: 9px 11px;
+	border-radius: 10px;
+	border: 1px solid rgba(53, 240, 160, 0.46);
+	background: linear-gradient(135deg, rgba(53, 240, 160, 0.14), rgba(126, 216, 255, 0.1));
+	color: #ecfff6;
+	box-shadow: inset 0 0 0 1px rgba(53, 240, 160, 0.12);
+}
+
+.report-list-highlight::before {
+	content: 'Sedentary Lifestyle Focus';
+	display: inline-block;
+	margin-right: 8px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	color: #032014;
+	background: rgba(141, 255, 211, 0.95);
+}
+
 .report-line strong,
 .report-list strong {
 	color: #f1fbff;
@@ -1318,6 +1349,277 @@ button:hover {
 	font-size: 0.82rem;
 }/* New Layout Refactor */
 .top-navbar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; background: #1a1a1a; border-bottom: 1px solid #333; }
+
+.pipeline-page {
+	padding: 16px;
+	display: grid;
+	gap: 14px;
+}
+
+.pipeline-header {
+	background: var(--card);
+	border: 1px solid var(--stroke);
+	border-radius: 18px;
+	padding: 14px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.pipeline-header p {
+	margin: 6px 0 0;
+	color: var(--muted);
+}
+
+.pipeline-header-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.pipeline-overview-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.pipeline-overview-card {
+	background: var(--card);
+	border: 1px solid var(--stroke);
+	border-radius: 14px;
+	padding: 12px;
+	display: grid;
+	gap: 6px;
+	font-size: 0.9rem;
+	color: #dceaf8;
+}
+
+.pipeline-overview-card h3 {
+	font-size: 0.98rem;
+	margin: 0 0 2px;
+}
+
+.pipeline-flow-wrap {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	overflow-x: auto;
+	padding-bottom: 6px;
+}
+
+.pipeline-stage-card {
+	min-width: 290px;
+	max-width: 340px;
+	background: var(--card);
+	border: 1px solid var(--stroke);
+	border-radius: 14px;
+	padding: 10px;
+	display: grid;
+	gap: 8px;
+	align-content: start;
+}
+
+.pipeline-stage-card h2 {
+	font-size: 1rem;
+}
+
+.pipeline-stage-card p {
+	margin: 0;
+	font-size: 0.84rem;
+	line-height: 1.45;
+	color: #c7d9e8;
+}
+
+.pipeline-step-triplet {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.pipeline-step-triplet-item {
+	display: grid;
+	gap: 6px;
+}
+
+.pipeline-step-triplet-item h4 {
+	margin: 0;
+	font-size: 0.72rem;
+	text-align: center;
+	color: #d6ebff;
+}
+
+.pipeline-raw-triplet {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.pipeline-raw-step-chip {
+	min-height: 88px;
+	padding: 8px;
+	border-radius: 10px;
+	border: 1px dashed rgba(156, 197, 220, 0.35);
+	background: rgba(3, 10, 18, 0.55);
+	display: grid;
+	align-content: start;
+	gap: 4px;
+	text-align: center;
+}
+
+.pipeline-raw-step-chip strong {
+	font-size: 0.78rem;
+	color: #e4f3ff;
+}
+
+.pipeline-raw-step-chip span {
+	font-size: 0.72rem;
+	line-height: 1.25;
+	color: #a8c0d4;
+	overflow-wrap: anywhere;
+}
+
+.pipeline-stage-image {
+	width: 100%;
+	aspect-ratio: 3 / 4;
+	object-fit: contain;
+	background: rgba(3, 10, 18, 0.9);
+	border-radius: 10px;
+	border: 1px solid rgba(156, 197, 220, 0.25);
+}
+
+.pipeline-stage-placeholder {
+	width: 100%;
+	aspect-ratio: 3 / 4;
+	border-radius: 10px;
+	border: 1px dashed rgba(156, 197, 220, 0.35);
+	background: rgba(3, 10, 18, 0.6);
+	display: grid;
+	place-items: center;
+	text-align: center;
+	padding: 10px;
+	font-size: 0.82rem;
+	color: #a8c0d4;
+	overflow-wrap: anywhere;
+}
+
+.pipeline-selection-summary {
+	display: grid;
+	gap: 6px;
+}
+
+.pipeline-selection-row {
+	padding: 8px;
+	border-radius: 10px;
+	border: 1px solid rgba(156, 197, 220, 0.2);
+	background: rgba(3, 10, 18, 0.65);
+	display: grid;
+	gap: 2px;
+	font-size: 0.8rem;
+	color: #d9eaf9;
+}
+
+.pipeline-selection-row strong {
+	font-size: 0.83rem;
+	color: #f0f8ff;
+}
+
+.pipeline-metric-list {
+	display: grid;
+	gap: 5px;
+	font-size: 0.84rem;
+	color: #e4f1ff;
+	padding: 8px;
+	background: rgba(3, 10, 18, 0.7);
+	border: 1px solid rgba(156, 197, 220, 0.18);
+	border-radius: 10px;
+}
+
+.pipeline-arrow {
+	align-self: center;
+	font-size: 1.45rem;
+	color: #77d8f4;
+	padding: 0 2px;
+	flex: 0 0 auto;
+}
+
+.pipeline-empty-state {
+	background: rgba(10, 25, 41, 0.6);
+	border: 1px solid rgba(156, 197, 220, 0.22);
+	border-radius: 14px;
+	padding: 14px;
+	text-align: center;
+}
+
+.pipeline-empty-state h3 {
+	margin: 0 0 6px;
+}
+
+.pipeline-empty-state p {
+	margin: 0;
+	color: var(--muted);
+}
+
+.pipeline-selection-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.pipeline-step-selection-card {
+	background: var(--card);
+	border: 1px solid var(--stroke);
+	border-radius: 14px;
+	padding: 10px;
+	display: grid;
+	gap: 8px;
+	align-content: start;
+}
+
+.pipeline-step-selection-card h3 {
+	font-size: 0.95rem;
+	margin: 0;
+}
+
+.pipeline-step-selection-card p {
+	margin: 0;
+	font-size: 0.84rem;
+	line-height: 1.45;
+	color: #c7d9e8;
+}
+
+@media (max-width: 760px) {
+	.pipeline-overview-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.pipeline-flow-wrap {
+		flex-direction: column;
+		overflow-x: visible;
+	}
+
+	.pipeline-stage-card {
+		max-width: none;
+		width: 100%;
+	}
+
+	.pipeline-arrow {
+		align-self: center;
+		transform: rotate(90deg);
+	}
+
+	.pipeline-selection-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.pipeline-step-triplet {
+		grid-template-columns: 1fr;
+	}
+
+	.pipeline-raw-triplet {
+		grid-template-columns: 1fr;
+	}
+}
 .nav-brand { display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 1.2rem; color: #fff; }
 .nav-logo { height: 32px; width: auto; }
 .nav-links { display: flex; gap: 2rem; list-style: none; margin: 0; padding: 0; }
